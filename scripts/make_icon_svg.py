@@ -24,9 +24,7 @@ bg = list(paths("ic_launcher_background"))
 fg = list(paths("ic_launcher_foreground"))
 # Drop the full-square background fill; the desktop icon is a round badge like kizuna-logo.png.
 bg = [p for p in bg if 'd="M0,0h432v432h-432z"' not in p]
-# Desktop only: a slightly stronger pink centre than Android's #FFF0F0 (asked 2026-11-26),
-# which read as white at taskbar sizes.
-bg = [p.replace('fill="#FFF0F0"', 'fill="#FFD6DB"') for p in bg]
+# The pink centre (#FFD6DB) now comes straight from the Android vector (changed there 2026-11-26).
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="66 63 300 300" width="1024" height="1024">
   <circle cx="216.07" cy="215.5" r="148" fill="#FAFAFA"/>
   {"".join(bg)}
