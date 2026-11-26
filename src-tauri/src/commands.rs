@@ -14,6 +14,9 @@ pub struct AppState {
     pub db: Db,
     pub plugins: PluginStore,
     pub downloads: Downloads,
+    pub manga: manga::ExtHost,
+    pub manga_tmp: std::path::PathBuf,
+    pub image_cache: std::path::PathBuf,
 }
 
 pub type Shared<'a> = State<'a, Arc<AppState>>;
@@ -136,21 +139,33 @@ pub struct NovelView {
     source: Option<SourceInfo>,
     /// Chapter ids with an offline copy.
     downloaded: Vec<i64>,
+    /// Display name of the source (novel plugin or manga extension).
+    source_name: Option<String>,
+}
+
+fn manga_source_name(s: &AppState, source_id: &str) -> Option<String> {
+    s.db.settings().ok()?.get(MANGA_SOURCE_CACHE)?.get(source_id)?.get("name")?.as_str().map(str::to_string)
 }
 
 fn novel_view(s: &AppState, id: i64) -> anyhow::Result<NovelView> {
     let novel = s.db.novel(id)?;
-    let source = s
-        .plugins
-        .path_for(&novel.source_id)
-        .ok()
-        .and_then(|p| plugins::load_info(&p).ok());
+    let source = if novel.kind == "manga" {
+        None
+    } else {
+        s.plugins.path_for(&novel.source_id).ok().and_then(|p| plugins::load_info(&p).ok())
+    };
+    let source_name = if novel.kind == "manga" {
+        manga_source_name(s, &novel.source_id)
+    } else {
+        source.as_ref().map(|i| i.name.clone())
+    };
     Ok(NovelView {
         chapters: s.db.chapters(id)?,
         category_ids: s.db.novel_categories(id)?,
         downloaded: s.downloads.downloaded(id),
         novel,
         source,
+        source_name,
     })
 }
 
@@ -164,6 +179,10 @@ pub async fn novel_get(state: Shared<'_>, id: i64) -> CmdResult<NovelView> {
 pub async fn novel_refresh(state: Shared<'_>, id: i64, details: bool, chapters: bool) -> CmdResult<NovelView> {
     blocking(&state, move |s| {
         let novel = s.db.novel(id)?;
+        if novel.kind == "manga" {
+            manga_refresh(s, &novel, details, chapters)?;
+            return novel_view(s, id);
+        }
         let path = s.plugins.path_for(&novel.source_id)?;
         if details {
             let d = plugins::details(&path, &novel.url)?;
@@ -306,6 +325,9 @@ pub async fn library_update(state: Shared<'_>) -> CmdResult<LibraryUpdateResult>
         for item in s.db.library()? {
             let n = item.novel;
             let outcome = (|| -> anyhow::Result<usize> {
+                if n.kind == "manga" {
+                    return manga_refresh(s, &n, false, true);
+                }
                 let path = s.plugins.path_for(&n.source_id)?;
                 let list = plugins::chapters(&path, &n.url)?;
                 s.db.sync_chapters(n.id, &list)
@@ -420,4 +442,184 @@ pub async fn settings_set(state: Shared<'_>, key: String, value: serde_json::Val
 #[tauri::command]
 pub fn now_ms() -> i64 {
     db::now_ms()
+}
+
+// ---- manga (extension host) ----------------------------------------------------------------
+
+use crate::manga::{self, InstalledExtension, RepoExtension};
+
+/// Source names/langs of installed manga extensions, cached in settings so screens can show
+/// them without starting the engine.
+pub const MANGA_SOURCE_CACHE: &str = "_mangaSources";
+
+fn cache_manga_sources(s: &AppState, exts: &[InstalledExtension]) -> anyhow::Result<()> {
+    let map: serde_json::Map<String, serde_json::Value> = exts
+        .iter()
+        .flat_map(|e| e.sources.iter())
+        .map(|src| {
+            (
+                src.id.clone(),
+                serde_json::json!({ "name": src.name, "lang": src.lang, "pkgName": src.pkg_name,
+                                    "supportsLatest": src.supports_latest, "baseUrl": src.base_url }),
+            )
+        })
+        .collect();
+    s.db.set_setting(MANGA_SOURCE_CACHE, &serde_json::Value::Object(map))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MangaEngineStatus {
+    installed: bool,
+    running: bool,
+    java: String,
+    jar: String,
+}
+
+#[tauri::command]
+pub async fn manga_engine_status(state: Shared<'_>) -> CmdResult<MangaEngineStatus> {
+    blocking(&state, |s| {
+        let p = s.manga.paths();
+        Ok(MangaEngineStatus {
+            installed: p.installed(),
+            running: s.manga.is_running(),
+            java: p.java.display().to_string(),
+            jar: p.jar.display().to_string(),
+        })
+    })
+    .await
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoListing {
+    extensions: Vec<RepoExtension>,
+    errors: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn manga_repo_list(state: Shared<'_>, repos: Vec<String>) -> CmdResult<RepoListing> {
+    blocking(&state, move |_| {
+        let mut out = RepoListing { extensions: vec![], errors: vec![] };
+        for r in repos {
+            match manga::fetch_repo(&r) {
+                Ok(mut list) => out.extensions.append(&mut list),
+                Err(e) => out.errors.push(format!("{r}: {e:#}")),
+            }
+        }
+        Ok(out)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn manga_extensions(state: Shared<'_>) -> CmdResult<Vec<InstalledExtension>> {
+    blocking(&state, |s| {
+        let exts = manga::extensions(&s.manga)?;
+        cache_manga_sources(s, &exts)?;
+        Ok(exts)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn manga_extension_install(state: Shared<'_>, entry: RepoExtension) -> CmdResult<InstalledExtension> {
+    blocking(&state, move |s| {
+        let ext = manga::install(&s.manga, &entry, &s.manga_tmp)?;
+        cache_manga_sources(s, &manga::extensions(&s.manga)?)?;
+        Ok(ext)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn manga_extension_uninstall(state: Shared<'_>, pkg: String) -> CmdResult<()> {
+    blocking(&state, move |s| {
+        manga::uninstall(&s.manga, &pkg)?;
+        cache_manga_sources(s, &manga::extensions(&s.manga)?)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn manga_browse(
+    state: Shared<'_>,
+    source_id: String,
+    kind: String,
+    page: i32,
+    query: Option<String>,
+) -> CmdResult<BrowsePage> {
+    blocking(&state, move |s| {
+        let res = manga::browse(&s.manga, &source_id, &kind, page, query.as_deref().unwrap_or(""))?;
+        let urls: Vec<String> = res.mangas.iter().map(|m| m.url.clone()).collect();
+        let favorites = s.db.favorites_among(&source_id, &urls)?;
+        let mut novels = Vec::with_capacity(res.mangas.len());
+        for m in res.mangas {
+            let id = s.db.upsert_listed(&source_id, &m.url, &m.title, m.thumbnail_url.as_deref(), "manga")?;
+            novels.push(BrowseItem { id, favorite: favorites.contains(&m.url), title: m.title, url: m.url, cover: m.thumbnail_url });
+        }
+        Ok(BrowsePage { novels, has_next_page: res.has_next_page })
+    })
+    .await
+}
+
+/// Manga equivalent of a novel refresh: details and/or chapters through the host.
+pub fn manga_refresh(s: &AppState, novel: &Novel, details: bool, chapters: bool) -> anyhow::Result<usize> {
+    if details {
+        let d = manga::details(&s.manga, &novel.source_id, &novel.url, &novel.title)?;
+        let nd = plugins::NovelDetails {
+            title: Some(d.title).filter(|t| !t.is_empty()),
+            cover: d.thumbnail_url,
+            author: match (d.author, d.artist) {
+                (Some(a), Some(b)) if a != b => Some(format!("{a}, {b}")),
+                (a, b) => a.or(b),
+            },
+            description: d.description,
+            genres: Some(d.genre).filter(|g| !g.is_empty()),
+            status: manga::status_text(d.status).map(str::to_string),
+        };
+        s.db.apply_details(novel.id, &nd)?;
+    }
+    if chapters {
+        let list: Vec<plugins::ChapterItem> = manga::chapters(&s.manga, &novel.source_id, &novel.url)?
+            .into_iter()
+            .map(|c| plugins::ChapterItem {
+                name: c.name,
+                url: c.url,
+                chapter_number: c.chapter_number,
+                date_upload: c.date_upload,
+                locked: false,
+            })
+            .collect();
+        return s.db.sync_chapters(novel.id, &list);
+    }
+    Ok(0)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MangaPageRef {
+    index: i32,
+    /// Direct image URL when the source already knows it; otherwise resolved from `page_url`.
+    image: Option<String>,
+    page_url: String,
+}
+
+#[tauri::command]
+pub async fn manga_pages(state: Shared<'_>, chapter_id: i64) -> CmdResult<Vec<MangaPageRef>> {
+    blocking(&state, move |s| {
+        let chapter = s.db.chapter(chapter_id)?;
+        let novel = s.db.novel(chapter.novel_id)?;
+        let pages = manga::pages(&s.manga, &novel.source_id, &chapter.url)?;
+        Ok(pages
+            .into_iter()
+            .map(|p| MangaPageRef { index: p.index, image: p.image_url.filter(|u| !u.is_empty()), page_url: p.url })
+            .collect())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn manga_sources_cached(state: Shared<'_>) -> CmdResult<serde_json::Value> {
+    blocking(&state, |s| Ok(s.db.settings()?.get(MANGA_SOURCE_CACHE).cloned().unwrap_or(serde_json::json!({})))).await
 }

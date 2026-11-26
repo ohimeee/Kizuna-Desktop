@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::plugins::{ChapterItem, NovelDetails};
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS novels (
@@ -104,6 +104,8 @@ pub struct Novel {
     pub initialized: bool,
     pub date_added: i64,
     pub last_update: i64,
+    /// "novel" or "manga".
+    pub kind: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -150,6 +152,7 @@ pub struct HistoryItem {
     pub novel_title: String,
     pub novel_cover: Option<String>,
     pub last_read: i64,
+    pub kind: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -158,10 +161,11 @@ pub struct UpdateItem {
     pub chapter: Chapter,
     pub novel_title: String,
     pub novel_cover: Option<String>,
+    pub kind: String,
 }
 
 const NOVEL_COLS: &str = "n.id, n.source_id, n.url, n.title, n.cover, n.author, n.description, n.genres, \
-     n.status, n.favorite, n.initialized, n.date_added, n.last_update";
+     n.status, n.favorite, n.initialized, n.date_added, n.last_update, n.kind";
 
 const CHAPTER_COLS: &str = "c.id, c.novel_id, c.url, c.name, c.chapter_number, c.date_upload, c.source_order, \
      c.read, c.bookmark, c.locked, c.last_paragraph, c.progress, c.date_fetch";
@@ -182,6 +186,7 @@ fn novel_from(row: &rusqlite::Row, o: usize) -> rusqlite::Result<Novel> {
         initialized: row.get(o + 10)?,
         date_added: row.get(o + 11)?,
         last_update: row.get(o + 12)?,
+        kind: row.get(o + 13)?,
     })
 }
 
@@ -208,6 +213,13 @@ impl Db {
         let conn = Connection::open(path).with_context(|| format!("opening {}", path.display()))?;
         conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;")?;
         conn.execute_batch(SCHEMA)?;
+        // v2: manga live in the same table as novels.
+        let has_kind: bool = conn
+            .prepare("SELECT 1 FROM pragma_table_info('novels') WHERE name = 'kind'")?
+            .exists([])?;
+        if !has_kind {
+            conn.execute_batch("ALTER TABLE novels ADD COLUMN kind TEXT NOT NULL DEFAULT 'novel';")?;
+        }
         conn.pragma_update(None, "user_version", SCHEMA_VERSION)?;
         Ok(Self { conn: Mutex::new(conn) })
     }
@@ -221,13 +233,17 @@ impl Db {
     /// Finds or creates the local row for a novel seen in a source listing; refreshes its
     /// title/cover while it isn't in the library (library entries keep their stored data).
     pub fn upsert_listed_novel(&self, source_id: &str, url: &str, title: &str, cover: Option<&str>) -> Result<i64> {
+        self.upsert_listed(source_id, url, title, cover, "novel")
+    }
+
+    pub fn upsert_listed(&self, source_id: &str, url: &str, title: &str, cover: Option<&str>, kind: &str) -> Result<i64> {
         let conn = self.conn();
         conn.execute(
-            "INSERT INTO novels (source_id, url, title, cover) VALUES (?1, ?2, ?3, ?4)
+            "INSERT INTO novels (source_id, url, title, cover, kind) VALUES (?1, ?2, ?3, ?4, ?5)
              ON CONFLICT(source_id, url) DO UPDATE SET
                title = CASE WHEN favorite = 0 THEN excluded.title ELSE title END,
                cover = CASE WHEN favorite = 0 AND excluded.cover IS NOT NULL THEN excluded.cover ELSE cover END",
-            params![source_id, url, title, cover],
+            params![source_id, url, title, cover, kind],
         )?;
         Ok(conn.query_row(
             "SELECT id FROM novels WHERE source_id = ?1 AND url = ?2",
@@ -398,12 +414,12 @@ impl Db {
              FROM novels n WHERE n.favorite = 1"
         ))?;
         let rows = stmt.query_map([], |r| {
-            let cats: String = r.get(16)?;
+            let cats: String = r.get(17)?;
             Ok(LibraryItem {
                 novel: novel_from(r, 0)?,
-                unread: r.get(13)?,
-                total: r.get(14)?,
-                last_read: r.get(15)?,
+                unread: r.get(14)?,
+                total: r.get(15)?,
+                last_read: r.get(16)?,
                 category_ids: serde_json::from_str(&cats).unwrap_or_default(),
             })
         })?;
@@ -466,7 +482,7 @@ impl Db {
         let conn = self.conn();
         // One row per novel: its most recently read chapter (like Mihon's History).
         let mut stmt = conn.prepare_cached(&format!(
-            "SELECT {CHAPTER_COLS}, n.title, n.cover, h.last_read
+            "SELECT {CHAPTER_COLS}, n.title, n.cover, h.last_read, n.kind
              FROM history h
              JOIN chapters c ON c.id = h.chapter_id
              JOIN novels n ON n.id = c.novel_id
@@ -475,7 +491,13 @@ impl Db {
              ORDER BY h.last_read DESC LIMIT ?1"
         ))?;
         let rows = stmt.query_map([limit], |r| {
-            Ok(HistoryItem { chapter: chapter_from(r, 0)?, novel_title: r.get(13)?, novel_cover: r.get(14)?, last_read: r.get(15)? })
+            Ok(HistoryItem {
+                chapter: chapter_from(r, 0)?,
+                novel_title: r.get(13)?,
+                novel_cover: r.get(14)?,
+                last_read: r.get(15)?,
+                kind: r.get(16)?,
+            })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
@@ -496,12 +518,12 @@ impl Db {
     pub fn updates(&self, limit: i64) -> Result<Vec<UpdateItem>> {
         let conn = self.conn();
         let mut stmt = conn.prepare_cached(&format!(
-            "SELECT {CHAPTER_COLS}, n.title, n.cover FROM chapters c JOIN novels n ON n.id = c.novel_id
+            "SELECT {CHAPTER_COLS}, n.title, n.cover, n.kind FROM chapters c JOIN novels n ON n.id = c.novel_id
              WHERE n.favorite = 1 AND c.date_fetch > 0
              ORDER BY c.date_fetch DESC, c.source_order DESC LIMIT ?1"
         ))?;
         let rows = stmt.query_map([limit], |r| {
-            Ok(UpdateItem { chapter: chapter_from(r, 0)?, novel_title: r.get(13)?, novel_cover: r.get(14)? })
+            Ok(UpdateItem { chapter: chapter_from(r, 0)?, novel_title: r.get(13)?, novel_cover: r.get(14)?, kind: r.get(15)? })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }

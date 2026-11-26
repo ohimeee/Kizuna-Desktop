@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod db;
 pub mod downloads;
+pub mod manga;
 pub mod plugins;
 
 use std::sync::Arc;
@@ -29,7 +30,16 @@ pub fn run() {
             let db = db::Db::open(&data_dir.join("kizuna.db"))?;
             let plugins = plugins::PluginStore::new(data_dir.join("sources"))?;
             let downloads = downloads::Downloads::new(data_dir.join("downloads"))?;
-            app.manage(Arc::new(AppState { db, plugins, downloads }));
+            let engine_dir = data_dir.join("manga-engine");
+            let manga = manga::ExtHost::new(manga::EnginePaths::resolve(&engine_dir, data_dir.join("manga")));
+            app.manage(Arc::new(AppState {
+                db,
+                plugins,
+                downloads,
+                manga,
+                manga_tmp: data_dir.join("manga-tmp"),
+                image_cache: data_dir.join("image-cache"),
+            }));
             downloads::Downloads::start(app.handle().clone());
             // The UI shows the (initially hidden) window once its splash is painted. Safety
             // net in case the frontend fails to load: show it anyway after a few seconds.
@@ -41,6 +51,14 @@ pub fn run() {
                 }
             });
             Ok(())
+        })
+        // Manga covers/pages, fetched by the extension host with each source's headers.
+        .register_asynchronous_uri_scheme_protocol("kimg", |ctx, request, responder| {
+            let state = ctx.app_handle().state::<Arc<AppState>>().inner().clone();
+            let uri = request.uri().to_string();
+            std::thread::spawn(move || {
+                responder.respond(manga::images::handle(&state.manga, &state.image_cache, &uri));
+            });
         })
         .invoke_handler(tauri::generate_handler![
             commands::sources_installed,
@@ -79,7 +97,21 @@ pub fn run() {
             commands::settings_get,
             commands::settings_set,
             commands::now_ms,
+            commands::manga_engine_status,
+            commands::manga_repo_list,
+            commands::manga_extensions,
+            commands::manga_extension_install,
+            commands::manga_extension_uninstall,
+            commands::manga_browse,
+            commands::manga_pages,
+            commands::manga_sources_cached,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // Stop the extension host with the app.
+            if let tauri::RunEvent::Exit = event {
+                app.state::<Arc<AppState>>().manga.stop();
+            }
+        });
 }

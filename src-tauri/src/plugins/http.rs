@@ -55,6 +55,18 @@ impl HttpClient {
 
     }
 
+    /// Downloads a file (e.g. an extension APK) to `out`. Fails on a non-success status.
+    pub fn download(&self, url: &str, out: &std::path::Path) -> Result<()> {
+        let mut response = self.client.get(url).send().map_err(friendly_error)?;
+        anyhow::ensure!(response.status().is_success(), "HTTP {} for {url}", response.status().as_u16());
+        let tmp = out.with_extension("part");
+        let mut file = std::fs::File::create(&tmp)?;
+        response.copy_to(&mut file)?;
+        drop(file);
+        std::fs::rename(&tmp, out)?;
+        Ok(())
+    }
+
     /// Value of cookie `name` that would be sent to `url`, or "" (matches Android's contract).
     pub fn get_cookie(&self, url: &str, name: &str) -> String {
         let Ok(url) = Url::parse(url) else { return String::new() };
