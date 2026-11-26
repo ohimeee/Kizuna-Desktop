@@ -20,7 +20,8 @@ const LABEL: &str = "browser";
 const SOLVE_TIMEOUT: Duration = Duration::from_secs(180);
 const LOAD_TIMEOUT: Duration = Duration::from_secs(45);
 const FETCH_TIMEOUT: Duration = Duration::from_secs(60);
-/// Cloudflare often clears its own check after a few seconds; only ask the user after this.
+/// The window shows as soon as the check asks for a click (`interactive`). Cloudflare's wording
+/// changes now and then, so any check still up after this shows the window too.
 const SHOW_AFTER: Duration = Duration::from_secs(8);
 
 static APP: OnceLock<AppHandle> = OnceLock::new();
@@ -65,6 +66,10 @@ struct PageState {
     href: String,
     ready: String,
     challenge: bool,
+    /// The check is waiting for the user (its "complete the action below" prompt), not
+    /// running its automatic test.
+    #[serde(default)]
+    interactive: bool,
     /// Set on the page before navigating away, so the old page isn't mistaken for the new one.
     old: bool,
 }
@@ -84,6 +89,14 @@ const STATE_JS: &str = r#"JSON.stringify({
   // forms) isn't a check the user has to pass.
   challenge: document.title === "Just a moment..." ||
     !!document.querySelector('#challenge-form, #challenge-running, #cf-challenge-running'),
+  // The checkbox itself is in a cross-site frame; the page around it says what it's waiting
+  // for: "Verify you are human by completing the action below" vs "Verifying you are human.
+  // This may take a few seconds."
+  interactive: (() => {
+    const t = (document.body && document.body.innerText || "").toLowerCase();
+    return /completing the action below|complete the action below|click to verify/.test(t) &&
+      !/may take a few seconds/.test(t);
+  })(),
   old: !!window.__kzOld
 })"#;
 
@@ -161,7 +174,7 @@ fn open(w: &WebviewWindow, url: &str) -> Result<()> {
         match state(w) {
             Ok(s) if !s.old && s.challenge => {
                 let since = *challenged_at.get_or_insert_with(Instant::now);
-                if !shown && since.elapsed() >= SHOW_AFTER {
+                if !shown && (s.interactive || since.elapsed() >= SHOW_AFTER) {
                     shown = true;
                     let _ = w.show();
                     let _ = w.unminimize();
