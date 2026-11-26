@@ -9,6 +9,7 @@
   import { toast } from "$lib/components/Toasts.svelte";
   import { formatDate } from "$lib/format";
   import { openUrl } from "@tauri-apps/plugin-opener";
+  import { untrack } from "svelte";
 
   const id = $derived(Number(page.params.id));
 
@@ -28,7 +29,8 @@
   let catChoice = $state<Set<number>>(new Set());
 
   $effect(() => {
-    load(id);
+    const novelId = id;
+    untrack(() => load(novelId));
   });
 
   async function load(novelId: number) {

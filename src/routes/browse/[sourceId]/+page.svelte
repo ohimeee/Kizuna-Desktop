@@ -5,7 +5,7 @@
   import CoverCard from "$lib/components/CoverCard.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import { sources } from "$lib/sources.svelte";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
 
   const sourceId = $derived(page.params.sourceId ?? "");
   const source = $derived(sources.byId(sourceId));
@@ -65,10 +65,12 @@
     }
   }
 
-  // (Re)load when the source or tab changes; search reloads on submit.
+  // (Re)load when the source or tab changes; search reloads on submit. untrack: reset() reads
+  // and writes the paging state, which would otherwise re-trigger this effect forever.
   $effect(() => {
-    sourceId;
-    if (tab !== "search") reset();
+    const id = sourceId;
+    const t = tab;
+    if (id && t !== "search") untrack(reset);
   });
 
   function submitSearch(e: Event) {

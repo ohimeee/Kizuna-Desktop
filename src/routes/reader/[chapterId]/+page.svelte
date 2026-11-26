@@ -13,7 +13,7 @@
   import { formatTime } from "$lib/format";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
 
   const CHAPTER_TITLE_SCALE = 1.7;
   const CHAPTER_TITLE_LINE_SPACING = 1.25;
@@ -70,7 +70,8 @@
   // ---- loading ----------------------------------------------------------------------------
   let loadGen = 0;
   $effect(() => {
-    load(chapterId);
+    const id = chapterId;
+    untrack(() => load(id));
   });
 
   async function load(id: number) {
