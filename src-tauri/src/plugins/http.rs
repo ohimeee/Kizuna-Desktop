@@ -44,15 +44,40 @@ impl HttpClient {
 
     pub fn get(&self, url: &str, headers_json: &str) -> Result<String> {
         let headers = parse_headers(headers_json)?;
-        self.execute(|| self.client.get(url).headers(headers.clone()))
-
+        self.send("GET", url, None, headers)
     }
 
     pub fn post(&self, url: &str, body: &str, headers_json: &str) -> Result<String> {
         let headers = parse_headers(headers_json)?;
-        let body = body.to_string();
-        self.execute(|| self.client.post(url).headers(headers.clone()).body(body.clone()))
+        self.send("POST", url, Some(body.to_string()), headers)
+    }
 
+    /// Plain request first; a Cloudflare check sends this host's requests through the real
+    /// browser window from then on (crate::browser). Never imitates a browser itself.
+    fn send(&self, method: &str, url: &str, body: Option<String>, headers: HeaderMap) -> Result<String> {
+        let via_browser = |headers: &HeaderMap| {
+            let pairs: Vec<(String, String)> = headers
+                .iter()
+                .filter_map(|(k, v)| Some((k.as_str().to_string(), v.to_str().ok()?.to_string())))
+                .collect();
+            crate::browser::request(url, method, body.as_deref(), &pairs)
+        };
+        if crate::browser::available() && crate::browser::host_needs_browser(url) {
+            return via_browser(&headers);
+        }
+        let (status, cf, text) = self.execute(|| {
+            let req = if method == "POST" { self.client.post(url) } else { self.client.get(url) };
+            let req = req.headers(headers.clone());
+            match &body {
+                Some(b) => req.body(b.clone()),
+                None => req,
+            }
+        })?;
+        if crate::browser::available() && crate::browser::is_challenge(status, cf.as_deref(), &text) {
+            crate::browser::remember_host(url);
+            return via_browser(&headers);
+        }
+        Ok(text)
     }
 
     /// Downloads a file (e.g. an extension APK) to `out`. Fails on a non-success status.
@@ -79,7 +104,8 @@ impl HttpClient {
             .unwrap_or_default()
     }
 
-    fn execute(&self, build: impl Fn() -> RequestBuilder) -> Result<String> {
+    /// Sends with rate-limit retries: (status, cf-mitigated header, body).
+    fn execute(&self, build: impl Fn() -> RequestBuilder) -> Result<(u16, Option<String>, String)> {
         let mut retries = 0;
         loop {
             let response = build().send().map_err(friendly_error)?;
@@ -91,7 +117,8 @@ impl HttpClient {
                 .map(str::to_string);
             let rate_limited = status == 429 || (status == 503 && retry_after.is_some());
             if !rate_limited || retries >= MAX_RATE_LIMIT_RETRIES {
-                return Ok(response.text()?);
+                let cf = response.headers().get("cf-mitigated").and_then(|v| v.to_str().ok()).map(str::to_string);
+                return Ok((status, cf, response.text()?));
             }
             drop(response);
             let secs = retry_after

@@ -9,7 +9,9 @@ Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Deskto
   (`src/lib/reader/paragraphs.ts`) must stay in parity with Android's (tests ported from it).
 - Never make HTTP requests imitate a browser fingerprint to get past Cloudflare (that's bot-detection
   evasion; it was blocked and reverted). The extension host's `CloudflareInterceptor` is a
-  pass-through stand-in on purpose.
+  pass-through stand-in on purpose. Cloudflare sites go through `src-tauri/src/browser.rs` instead: the
+  real WebView2 makes the request (page `fetch` in a hidden window) and the user solves any check in it.
+  Never auto-solve or hide an interactive check.
 - Svelte `$effect`s that call loaders must wrap them in `untrack()` (an effect loop hit before).
 - Ask before publishing releases or pushing to the public repos.
 
@@ -37,5 +39,5 @@ and installs it into `<app data>/manga-engine/`. The host builds its own class c
 on exit. `KIZUNA_ENGINE_URL` overrides the download URL for local testing.
 Released in v0.2.0. `kizuna-manga-engine-1.zip` must stay attached to the v0.2.0 release (the app
 downloads it from there); a new engine needs a new ENGINE_VERSION and its zip on that app release.
-Next (not started): JS manga plugins, "verify in browser" for Cloudflare sites, phone sync
+Next (not started): JS manga plugins, browser fetching for manga extensions (novels done), phone sync
 (backup import is done; sync planned in `docs/phone-backup-and-sync-plan.md`, transport undecided).

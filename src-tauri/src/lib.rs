@@ -1,4 +1,5 @@
 pub mod backup;
+pub mod browser;
 pub mod commands;
 pub mod db;
 pub mod downloads;
@@ -26,6 +27,7 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            browser::init(app.handle().clone());
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
             let db = db::Db::open(&data_dir.join("kizuna.db"))?;
@@ -112,10 +114,13 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app, event| {
-            // Stop the extension host with the app.
-            if let tauri::RunEvent::Exit = event {
-                app.state::<Arc<AppState>>().manga.stop();
+        .run(|app, event| match event {
+            // Closing the main window quits, even while the (hidden) browser window exists.
+            tauri::RunEvent::WindowEvent { label, event: tauri::WindowEvent::Destroyed, .. } if label == "main" => {
+                app.exit(0);
             }
+            // Stop the extension host with the app.
+            tauri::RunEvent::Exit => app.state::<Arc<AppState>>().manga.stop(),
+            _ => {}
         });
 }
