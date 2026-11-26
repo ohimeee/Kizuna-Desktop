@@ -1,7 +1,7 @@
 # Kizuna Desktop
 
 Windows companion to [Kizuna](https://github.com/ohimeee/Kizuna) (Android, `D:\Coding\Kizuna`).
-Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Desktop (v0.1.0 released).
+Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Desktop (v0.2.0 released).
 
 ## Rules
 - Commit messages: imperative title, **no trailers ever** (no Co-Authored-By, no "Generated with").
@@ -23,7 +23,7 @@ Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Deskto
   `.\gradlew.bat :host:fatJar`. Never pipe gradlew through `tail`. JBR can't `jlink` (no jmods).
 - Tests: `npm test`, `cargo test --lib` (in src-tauri), `cargo run --example smoke -- D:\Coding\Kizuna\novel-sources`.
 
-## Current work: phase 4, manga add-on (own engine)
+## Phase 4, manga add-on (own engine): done
 `ext-host/` runs Mihon extensions (Suwayomi's AndroidCompat + source API, MPL-2.0, see `ext-host/NOTICE.md`);
 Rust talks to it over JSON lines (`src-tauri/src/manga/`); UI: Browse → Manga, `/browse/manga/[id]`,
 `/manga-reader/[id]`. Verified live (Keiyoushi "Aqua Manga"): install of the prebuilt JAR, popular,
@@ -34,6 +34,6 @@ Engine packaging is done and tested in the app: `scripts/build-manga-engine.ps1 
 version/size/SHA-256 to paste into `src-tauri/src/manga/engine.rs`; More → Manga downloads, verifies
 and installs it into `<app data>/manga-engine/`. The host builds its own class cache (`manga/host.jsa`)
 on exit. `KIZUNA_ENGINE_URL` overrides the download URL for local testing.
-Next: release v0.2.0 (ask first). The app downloads the engine from the v0.2.0 release, so
-`kizuna-manga-engine-1.zip` must be attached to that exact release.
-Later: JS manga plugins, "verify in browser" for Cloudflare sites, phone backup import.
+Released in v0.2.0. `kizuna-manga-engine-1.zip` must stay attached to the v0.2.0 release (the app
+downloads it from there); a new engine needs a new ENGINE_VERSION and its zip on that app release.
+Next (not started): JS manga plugins, "verify in browser" for Cloudflare sites, phone backup import.
