@@ -13,6 +13,8 @@ use commands::AppState;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         // Remember size/position/maximized, but not the reader's fullscreen mode.
         .plugin(
             tauri_plugin_window_state::Builder::default()
@@ -29,6 +31,15 @@ pub fn run() {
             let downloads = downloads::Downloads::new(data_dir.join("downloads"))?;
             app.manage(Arc::new(AppState { db, plugins, downloads }));
             downloads::Downloads::start(app.handle().clone());
+            // The UI shows the (initially hidden) window once its splash is painted. Safety
+            // net in case the frontend fails to load: show it anyway after a few seconds.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(4));
+                if let Some(w) = handle.get_webview_window("main") {
+                    let _ = w.show();
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

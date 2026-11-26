@@ -18,7 +18,9 @@
         "height": 800,
         "minWidth": 800,
         "minHeight": 600,
-        "center": true
+        "center": true,
+        "visible": false,
+        "backgroundColor": "#ef98a6"
       }
     ],
     "security": {
@@ -51,6 +53,18 @@
       },
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFGNThCMkU3NDNCMzAwOEQKUldTTkFMTkQ1N0pZSDUrQ0NsZCtOS05QZzZ1YVpMZ1d1b3graGwwNmFpUnpsQzQ4UUlpL0dxb0YK",
+      "endpoints": [
+        "https://github.com/ohimeee/Kizuna-Desktop/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

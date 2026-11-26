@@ -5,6 +5,13 @@
   import { THEMES } from "$lib/theme/themes";
   import { isDark } from "$lib/theme/apply";
   import { downloads } from "$lib/downloads.svelte";
+  import { updater } from "$lib/updater.svelte";
+  import { toast } from "$lib/components/Toasts.svelte";
+
+  async function checkUpdates() {
+    const found = await updater.check();
+    if (!found) toast(updater.lastError ? "Couldn't check for updates" : "You're on the latest version");
+  }
   import { onMount } from "svelte";
 
   let version = $state("");
@@ -67,6 +74,9 @@
       <section>
         <h2 class="label-large">About</h2>
         <div class="row"><span>Kizuna Desktop</span><span class="muted">{version}</span></div>
+        <button class="row link btn-row" disabled={updater.checking} onclick={checkUpdates}>
+          <Icon name="update" /><span>{updater.checking ? "Checking…" : "Check for updates"}</span>
+        </button>
         <div class="body-small muted">
           Light novels on Windows, sharing the Android app's source plugins. Reader fonts Lora and Nunito are under the SIL Open Font License.
         </div>
@@ -81,6 +91,7 @@
   h2 { color: var(--primary); margin: 16px 0 8px; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; }
   .link { justify-content: flex-start; padding: 0 8px; border-radius: var(--radius-m); }
+  .btn-row { width: 100%; border: none; background: none; text-align: left; }
   .link:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
   .toggle { cursor: pointer; }
   .toggle input { width: 20px; height: 20px; accent-color: var(--primary); }

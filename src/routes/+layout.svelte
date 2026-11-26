@@ -5,14 +5,29 @@
   import Toasts from "$lib/components/Toasts.svelte";
   import { settings } from "$lib/settings.svelte";
   import { downloads } from "$lib/downloads.svelte";
+  import UpdateDialog from "$lib/components/UpdateDialog.svelte";
+  import { updater } from "$lib/updater.svelte";
   import { applyTheme } from "$lib/theme/apply";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
 
   let { children } = $props();
 
   onMount(() => {
-    settings.load();
+    // The window starts hidden (tauri.conf.json) so it never flashes white; the splash in
+    // app.html is already painted by now, so show it.
+    getCurrentWindow().show().catch(() => {});
+    settings.load().then(async () => {
+      await tick();
+      const splash = document.getElementById("splash");
+      if (splash) {
+        splash.classList.add("hide");
+        setTimeout(() => splash.remove(), 300);
+      }
+    });
     downloads.start();
+    // Quiet update check shortly after start (skipped in dev builds).
+    if (!import.meta.env.DEV) setTimeout(() => updater.check(true), 4000);
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => applyTheme(settings.values.appTheme, settings.values.themeMode, settings.values.pureBlack);
     mq.addEventListener("change", onChange);
@@ -34,6 +49,7 @@
   </div>
 {/if}
 <Toasts />
+<UpdateDialog />
 
 <style>
   .app {
