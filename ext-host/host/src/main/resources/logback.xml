@@ -1,0 +1,8 @@
+<configuration>
+  <!-- stdout carries the JSON protocol, so all logging goes to stderr. -->
+  <appender name="ERR" class="ch.qos.logback.core.ConsoleAppender">
+    <target>System.err</target>
+    <encoder><pattern>%d{HH:mm:ss} %-5level %logger{20} - %msg%n</pattern></encoder>
+  </appender>
+  <root level="WARN"><appender-ref ref="ERR"/></root>
+</configuration>
