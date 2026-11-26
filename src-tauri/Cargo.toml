@@ -1,8 +1,8 @@
 [package]
 name = "kizuna-desktop"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Kizuna Desktop: light novel reader"
+authors = ["ohimeee"]
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -32,6 +32,8 @@ url = "2.5.9"
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["blocking", "rustls", "http2", "charset", "system-proxy", "cookies", "gzip", "brotli", "deflate", "zstd", "json", "query"] }
 ego-tree = "0.11.1"
+rusqlite = { version = "0.43.0", features = ["bundled"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
