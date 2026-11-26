@@ -2,11 +2,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { BrowsePage } from "./api";
 
-export interface RepoSource { name: string; lang: string; id: string; baseUrl: string | null }
+export interface RepoSource { id: string; name: string; lang: string; baseUrl: string | null }
 export interface RepoExtension {
   name: string;
   pkg: string;
-  apk: string;
+  apkUrl: string;
   lang: string;
   code: number;
   version: string;

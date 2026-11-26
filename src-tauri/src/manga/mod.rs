@@ -14,38 +14,112 @@ use crate::plugins::http::HTTP;
 
 pub use host::{EnginePaths, ExtHost};
 
-// ---- extension repos (Mihon index.min.json) ----------------------------------------------
+// ---- extension repos ---------------------------------------------------------------------
+//
+// Two index formats exist:
+// - v1 (legacy): `index.min.json` / `index.json`, an array of {name, pkg, apk, lang, code, ...};
+//   APKs live at `<repo>/apk/<apk>`, icons at `<repo>/icon/<pkg>.png`.
+// - v2 (Mihon 0.20.1+, e.g. Keiyoushi since 2026): `repo.json` points at `index.pb`; the same data
+//   is published as JSON in `index.json` = {name, signingKey, extensionList: {extensions: [...]}},
+//   each with direct `resources.apkUrl` / `iconUrl`. Repos on v2 leave a stub `index.min.json`
+//   that only says "update your app", so v2 is tried first.
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RepoSource {
-    pub name: String,
-    pub lang: String,
-    /// String: 64-bit ids lose precision as JS numbers.
-    #[serde(deserialize_with = "id_to_string")]
-    pub id: String,
-    #[serde(default)]
-    pub base_url: Option<String>,
-}
-
+/// One extension from a repo, normalised across index formats. Sent to and back from the UI.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoExtension {
     pub name: String,
     pub pkg: String,
-    pub apk: String,
+    pub apk_url: String,
+    pub icon_url: String,
     pub lang: String,
     pub code: i64,
     pub version: String,
-    #[serde(default, deserialize_with = "int_to_bool")]
     pub nsfw: bool,
-    #[serde(default)]
     pub sources: Vec<RepoSource>,
-    /// Filled in by us: which repo this came from, and its icon URL.
-    #[serde(default)]
+    /// Index URL this came from.
     pub repo: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoSource {
+    /// String: 64-bit ids lose precision as JS numbers.
+    pub id: String,
+    pub name: String,
+    pub lang: String,
+    pub base_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct V1Ext {
+    name: String,
+    pkg: String,
+    apk: String,
+    lang: String,
+    #[serde(deserialize_with = "num_or_str_i64")]
+    code: i64,
+    version: String,
+    #[serde(default, deserialize_with = "int_to_bool")]
+    nsfw: bool,
     #[serde(default)]
-    pub icon_url: String,
+    sources: Vec<V1Source>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct V1Source {
+    name: String,
+    lang: String,
+    #[serde(deserialize_with = "id_to_string")]
+    id: String,
+    #[serde(default)]
+    base_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct V2Index {
+    extension_list: V2List,
+}
+
+#[derive(Deserialize)]
+struct V2List {
+    extensions: Vec<V2Ext>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct V2Ext {
+    name: String,
+    package_name: String,
+    resources: V2Resources,
+    #[serde(default, deserialize_with = "num_or_str_i64")]
+    version_code: i64,
+    version_name: String,
+    #[serde(default)]
+    content_warning: Option<String>,
+    #[serde(default)]
+    sources: Vec<V2Source>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct V2Resources {
+    apk_url: String,
+    #[serde(default)]
+    icon_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct V2Source {
+    #[serde(deserialize_with = "id_to_string")]
+    id: String,
+    name: String,
+    language: String,
+    #[serde(default)]
+    home_url: Option<String>,
 }
 
 fn id_to_string<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
@@ -53,6 +127,15 @@ fn id_to_string<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Err
     Ok(match v {
         serde_json::Value::String(s) => s,
         other => other.to_string(),
+    })
+}
+
+fn num_or_str_i64<'de, D: serde::Deserializer<'de>>(d: D) -> Result<i64, D::Error> {
+    let v = serde_json::Value::deserialize(d)?;
+    Ok(match v {
+        serde_json::Value::Number(n) => n.as_i64().unwrap_or(0),
+        serde_json::Value::String(s) => s.trim().parse().unwrap_or(0),
+        _ => 0,
     })
 }
 
@@ -65,32 +148,90 @@ fn int_to_bool<'de, D: serde::Deserializer<'de>>(d: D) -> Result<bool, D::Error>
     })
 }
 
-/// `https://host/path/index.min.json` → `https://host/path`
+/// Whatever the user pasted (repo base, repo.json, index.pb, index.json, index.min.json) →
+/// the repo's base URL.
 pub fn repo_base(url: &str) -> String {
     let u = url.trim().trim_end_matches('/');
     match u.rsplit_once('/') {
-        Some((base, last)) if last.ends_with(".json") => base.to_string(),
+        Some((base, last)) if last.ends_with(".json") || last.ends_with(".pb") => base.to_string(),
         _ => u.to_string(),
     }
 }
 
-/// Normalises what the user pasted: a repo base or its index URL → the index URL.
-pub fn repo_index_url(url: &str) -> String {
-    let u = url.trim().trim_end_matches('/');
-    if u.ends_with(".json") { u.to_string() } else { format!("{u}/index.min.json") }
+fn shared_lang(langs: impl Iterator<Item = String>) -> String {
+    let set: std::collections::BTreeSet<String> = langs.collect();
+    if set.len() == 1 { set.into_iter().next().unwrap() } else { "all".into() }
+}
+
+fn from_v2(index: V2Index, repo: &str) -> Vec<RepoExtension> {
+    index
+        .extension_list
+        .extensions
+        .into_iter()
+        .map(|e| RepoExtension {
+            lang: shared_lang(e.sources.iter().map(|s| s.language.clone())),
+            nsfw: e.content_warning.as_deref() == Some("CONTENT_WARNING_NSFW"),
+            sources: e
+                .sources
+                .into_iter()
+                .map(|s| RepoSource { id: s.id, name: s.name, lang: s.language, base_url: s.home_url })
+                .collect(),
+            name: e.name,
+            pkg: e.package_name,
+            apk_url: e.resources.apk_url,
+            icon_url: e.resources.icon_url.unwrap_or_default(),
+            code: e.version_code,
+            version: e.version_name,
+            repo: repo.to_string(),
+        })
+        .collect()
+}
+
+fn from_v1(list: Vec<V1Ext>, base: &str, repo: &str) -> Vec<RepoExtension> {
+    list.into_iter()
+        .map(|e| RepoExtension {
+            apk_url: format!("{base}/apk/{}", e.apk),
+            icon_url: format!("{base}/icon/{}.png", e.pkg),
+            sources: e
+                .sources
+                .into_iter()
+                .map(|s| RepoSource { id: s.id, name: s.name, lang: s.lang, base_url: s.base_url })
+                .collect(),
+            name: e.name,
+            pkg: e.pkg,
+            lang: e.lang,
+            code: e.code,
+            version: e.version,
+            nsfw: e.nsfw,
+            repo: repo.to_string(),
+        })
+        .collect()
+}
+
+/// Parses an index body in either format.
+pub fn parse_index(body: &str, base: &str, repo: &str) -> Result<Vec<RepoExtension>> {
+    let value: serde_json::Value = serde_json::from_str(body).context("not JSON")?;
+    if value.get("extensionList").is_some() {
+        let v2: V2Index = serde_json::from_value(value).context("unexpected v2 index format")?;
+        return Ok(from_v2(v2, repo));
+    }
+    let v1: Vec<V1Ext> = serde_json::from_value(value).context("unexpected index format")?;
+    Ok(from_v1(v1, base, repo))
 }
 
 pub fn fetch_repo(url: &str) -> Result<Vec<RepoExtension>> {
-    let index = repo_index_url(url);
-    let body = HTTP.get(&index, "")?;
-    let mut list: Vec<RepoExtension> =
-        serde_json::from_str(&body).with_context(|| format!("{index} isn't a Mihon extension repo index"))?;
-    let base = repo_base(&index);
-    for e in &mut list {
-        e.icon_url = format!("{base}/icon/{}.png", e.pkg);
-        e.repo = index.clone();
+    let base = repo_base(url);
+    let mut last_err = None;
+    // index.json first: full v2 (or full v1) list. Then the legacy minified v1 list.
+    for name in ["index.json", "index.min.json"] {
+        let index = format!("{base}/{name}");
+        match HTTP.get(&index, "").and_then(|body| parse_index(&body, &base, &index)) {
+            Ok(list) if !list.is_empty() => return Ok(list),
+            Ok(_) => last_err = Some(anyhow!("{index} has no extensions")),
+            Err(e) => last_err = Some(e.context(format!("reading {index}"))),
+        }
     }
-    Ok(list)
+    Err(last_err.unwrap_or_else(|| anyhow!("{base} isn't a Mihon extension repo")))
 }
 
 // ---- host-side types ---------------------------------------------------------------------
@@ -189,7 +330,7 @@ pub fn extensions(host: &ExtHost) -> Result<Vec<InstalledExtension>> {
 
 /// Downloads an extension APK from its repo and installs it through the host.
 pub fn install(host: &ExtHost, ext: &RepoExtension, tmp_dir: &Path) -> Result<InstalledExtension> {
-    let url = format!("{}/apk/{}", repo_base(&ext.repo), ext.apk);
+    let url = ext.apk_url.clone();
     std::fs::create_dir_all(tmp_dir)?;
     let apk: PathBuf = tmp_dir.join(format!("{}.apk", ext.pkg));
     HTTP.download(&url, &apk).with_context(|| format!("downloading {}", ext.name))?;
@@ -240,17 +381,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn repo_urls() {
-        assert_eq!(repo_index_url("https://x.dev/repo"), "https://x.dev/repo/index.min.json");
-        assert_eq!(repo_index_url("https://x.dev/repo/index.min.json"), "https://x.dev/repo/index.min.json");
-        assert_eq!(repo_base("https://x.dev/repo/index.min.json"), "https://x.dev/repo");
+    fn repo_base_accepts_any_index_url() {
+        for u in [
+            "https://x.dev/repo",
+            "https://x.dev/repo/",
+            "https://x.dev/repo/index.min.json",
+            "https://x.dev/repo/index.pb",
+            "https://x.dev/repo/repo.json",
+        ] {
+            assert_eq!(repo_base(u), "https://x.dev/repo", "{u}");
+        }
     }
 
     #[test]
-    fn parses_mihon_index_entry() {
+    fn parses_v1_index() {
         let raw = r#"[{"name":"Tachiyomi: Example","pkg":"eu.kanade.tachiyomi.extension.en.example","apk":"tachiyomi-en.example-v1.4.1.apk","lang":"en","code":1,"version":"1.4.1","nsfw":0,"sources":[{"name":"Example","lang":"en","id":"1234567890123456789","baseUrl":"https://example.com"}]}]"#;
-        let list: Vec<RepoExtension> = serde_json::from_str(raw).unwrap();
+        let list = parse_index(raw, "https://x.dev/repo", "i").unwrap();
+        assert_eq!(list[0].apk_url, "https://x.dev/repo/apk/tachiyomi-en.example-v1.4.1.apk");
         assert_eq!(list[0].sources[0].id, "1234567890123456789");
         assert!(!list[0].nsfw);
+    }
+
+    #[test]
+    fn parses_v2_index() {
+        let raw = r#"{"name":"Keiyoushi","extensionList":{"extensions":[{"name":"AchyManga","packageName":"eu.kanade.tachiyomi.extension.all.achymanga","resources":{"apkUrl":"https://e.x/a.apk","iconUrl":"https://e.x/i.png"},"extensionLib":"1.6","versionCode":"106001","versionName":"1.6.1","contentWarning":"CONTENT_WARNING_MIXED","sources":[{"id":"9124545289113350724","name":"AchyManga","language":"es","homeUrl":"https://achymanga.online"},{"id":"2311891545723109443","name":"AchyManga","language":"en"}]}]}}"#;
+        let list = parse_index(raw, "https://x.dev/repo", "i").unwrap();
+        let e = &list[0];
+        assert_eq!((e.pkg.as_str(), e.apk_url.as_str(), e.code, e.lang.as_str()), ("eu.kanade.tachiyomi.extension.all.achymanga", "https://e.x/a.apk", 106001, "all"));
+        assert!(!e.nsfw);
+        assert_eq!(e.sources[1].base_url, None);
     }
 }
