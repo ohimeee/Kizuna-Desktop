@@ -44,7 +44,7 @@
   });
 
   // The reader is full-window, no rail.
-  const immersive = $derived(page.url.pathname.startsWith("/reader"));
+  const immersive = $derived(page.url.pathname.startsWith("/reader") || page.url.pathname.startsWith("/manga-reader"));
 </script>
 
 {#if settings.loaded}

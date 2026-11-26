@@ -49,6 +49,7 @@ export interface Novel {
   initialized: boolean;
   dateAdded: number;
   lastUpdate: number;
+  kind: "novel" | "manga";
 }
 
 export interface Chapter {
@@ -73,6 +74,7 @@ export interface NovelView {
   categoryIds: number[];
   source: SourceInfo | null;
   downloaded: number[];
+  sourceName: string | null;
 }
 
 export interface QueueItem { chapterId: number; novelId: number; chapterName: string; novelTitle: string }
@@ -86,8 +88,12 @@ export type DownloadProgress =
 
 export interface LibraryItem extends Novel { unread: number; total: number; lastRead: number; categoryIds: number[] }
 export interface Category { id: number; name: string; sort: number }
-export interface HistoryItem { chapter: Chapter; novelTitle: string; novelCover: string | null; lastRead: number }
-export interface UpdateItem { chapter: Chapter; novelTitle: string; novelCover: string | null }
+export interface HistoryItem { chapter: Chapter; novelTitle: string; novelCover: string | null; lastRead: number; kind: string; sourceId: string }
+export interface UpdateItem { chapter: Chapter; novelTitle: string; novelCover: string | null; kind: string; sourceId: string }
+
+/** Reader route for a chapter of either kind. */
+export const readerHref = (kind: string | undefined, chapterId: number) =>
+  kind === "manga" ? `/manga-reader/${chapterId}` : `/reader/${chapterId}`;
 export interface LibraryUpdateResult { newChapters: number; checked: number; errors: string[] }
 
 export const api = {

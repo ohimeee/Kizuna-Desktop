@@ -153,6 +153,7 @@ pub struct HistoryItem {
     pub novel_cover: Option<String>,
     pub last_read: i64,
     pub kind: String,
+    pub source_id: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -162,6 +163,7 @@ pub struct UpdateItem {
     pub novel_title: String,
     pub novel_cover: Option<String>,
     pub kind: String,
+    pub source_id: String,
 }
 
 const NOVEL_COLS: &str = "n.id, n.source_id, n.url, n.title, n.cover, n.author, n.description, n.genres, \
@@ -482,7 +484,7 @@ impl Db {
         let conn = self.conn();
         // One row per novel: its most recently read chapter (like Mihon's History).
         let mut stmt = conn.prepare_cached(&format!(
-            "SELECT {CHAPTER_COLS}, n.title, n.cover, h.last_read, n.kind
+            "SELECT {CHAPTER_COLS}, n.title, n.cover, h.last_read, n.kind, n.source_id
              FROM history h
              JOIN chapters c ON c.id = h.chapter_id
              JOIN novels n ON n.id = c.novel_id
@@ -497,6 +499,7 @@ impl Db {
                 novel_cover: r.get(14)?,
                 last_read: r.get(15)?,
                 kind: r.get(16)?,
+                source_id: r.get(17)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -518,12 +521,12 @@ impl Db {
     pub fn updates(&self, limit: i64) -> Result<Vec<UpdateItem>> {
         let conn = self.conn();
         let mut stmt = conn.prepare_cached(&format!(
-            "SELECT {CHAPTER_COLS}, n.title, n.cover, n.kind FROM chapters c JOIN novels n ON n.id = c.novel_id
+            "SELECT {CHAPTER_COLS}, n.title, n.cover, n.kind, n.source_id FROM chapters c JOIN novels n ON n.id = c.novel_id
              WHERE n.favorite = 1 AND c.date_fetch > 0
              ORDER BY c.date_fetch DESC, c.source_order DESC LIMIT ?1"
         ))?;
         let rows = stmt.query_map([limit], |r| {
-            Ok(UpdateItem { chapter: chapter_from(r, 0)?, novel_title: r.get(13)?, novel_cover: r.get(14)?, kind: r.get(15)? })
+            Ok(UpdateItem { chapter: chapter_from(r, 0)?, novel_title: r.get(13)?, novel_cover: r.get(14)?, kind: r.get(15)?, source_id: r.get(16)? })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }

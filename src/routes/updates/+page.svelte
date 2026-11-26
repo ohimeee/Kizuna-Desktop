@@ -2,6 +2,8 @@
   import { onMount } from "svelte";
   import { api, errorText, type UpdateItem } from "$lib/api";
   import Icon from "$lib/components/Icon.svelte";
+  import { readerHref } from "$lib/api";
+  import { coverSrc } from "$lib/manga";
   import { toast } from "$lib/components/Toasts.svelte";
   import { groupByDay } from "$lib/format";
 
@@ -55,8 +57,8 @@
       <ul>
         {#each g.items as u (u.chapter.id)}
           <li class:read={u.chapter.read}>
-            <a class="row" href="/reader/{u.chapter.id}">
-              <div class="thumb">{#if u.novelCover}<img src={u.novelCover} alt="" referrerpolicy="no-referrer" />{/if}</div>
+            <a class="row" href={readerHref(u.kind, u.chapter.id)}>
+              <div class="thumb">{#if u.novelCover}<img src={coverSrc(u.kind, u.sourceId, u.novelCover)} alt="" referrerpolicy="no-referrer" />{/if}</div>
               <div class="text">
                 <div class="body-medium ellipsis">{u.novelTitle}</div>
                 <div class="body-small muted ellipsis">

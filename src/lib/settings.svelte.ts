@@ -18,6 +18,15 @@ export const defaults = {
   librarySortDesc: false,
   libraryUnreadOnly: false,
   showUnreadBadge: true,
+  libraryKind: "all" as "all" | "novel" | "manga",
+
+  // Manga
+  mangaRepos: [] as string[],
+  mangaShowNsfw: false,
+  mangaReaderMode: "webtoon" as "webtoon" | "paged-ltr" | "paged-rtl",
+  mangaFit: "width" as "width" | "height" | "original",
+  mangaPageGap: false,
+  mangaMaxWidth: 900,
 
   // Reader (NovelReaderPreferences)
   fontSize: 16,

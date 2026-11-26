@@ -164,6 +164,8 @@ import i160 from "@material-symbols/svg-400/rounded/warning.svg?raw";
 import i161 from "@material-symbols/svg-400/rounded/warning-fill.svg?raw";
 import i162 from "@material-symbols/svg-400/rounded/width_normal.svg?raw";
 import i163 from "@material-symbols/svg-400/rounded/width_normal-fill.svg?raw";
+import i164 from "@material-symbols/svg-400/rounded/zoom_in.svg?raw";
+import i165 from "@material-symbols/svg-400/rounded/zoom_in-fill.svg?raw";
 
 export const ICONS: Record<string, string> = {
   "add": i0,
@@ -330,4 +332,6 @@ export const ICONS: Record<string, string> = {
   "warning-fill": i161,
   "width_normal": i162,
   "width_normal-fill": i163,
+  "zoom_in": i164,
+  "zoom_in-fill": i165,
 };

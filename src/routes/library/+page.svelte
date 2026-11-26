@@ -5,6 +5,7 @@
   import Icon from "$lib/components/Icon.svelte";
   import { toast } from "$lib/components/Toasts.svelte";
   import { settings, type LibrarySort } from "$lib/settings.svelte";
+  import { coverSrc } from "$lib/manga";
 
   let items = $state<LibraryItem[]>([]);
   let categories = $state<Category[]>([]);
@@ -64,6 +65,7 @@
       categories.length === 0 ? true : tab === -1 ? i.categoryIds.length === 0 : i.categoryIds.includes(tab),
     );
     if (q) list = list.filter((i) => i.title.toLowerCase().includes(q) || i.author?.toLowerCase().includes(q));
+    if (settings.values.libraryKind !== "all") list = list.filter((i) => i.kind === settings.values.libraryKind);
     if (settings.values.libraryUnreadOnly) list = list.filter((i) => i.unread > 0);
     const key = settings.values.librarySort;
     const cmp: Record<LibrarySort, (a: LibraryItem, b: LibraryItem) => number> = {
@@ -84,6 +86,13 @@
 <div class="screen">
   <header class="top-bar">
     <h1>Library</h1>
+    {#if items.some((i) => i.kind === "manga")}
+      <div class="kinds">
+        {#each [["all", "All"], ["novel", "Novels"], ["manga", "Manga"]] as [k, label]}
+          <button class="chip" class:selected={settings.values.libraryKind === k} onclick={() => settings.set("libraryKind", k as "all" | "novel" | "manga")}>{label}</button>
+        {/each}
+      </div>
+    {/if}
     <input class="text-field search" placeholder="Search library" bind:value={query} />
     <button class="icon-btn" class:active={showSort} title="Sort & filter" onclick={() => (showSort = !showSort)}><Icon name="filter_list" /></button>
     <button class="icon-btn" title="Update library" disabled={updating} onclick={updateLibrary}><Icon name="refresh" class={updating ? "spin" : ""} /></button>
@@ -123,7 +132,7 @@
     {:else}
       <div class="grid">
         {#each shown as n (n.id)}
-          <CoverCard href="/novel/{n.id}" title={n.title} cover={n.cover} unread={settings.values.showUnreadBadge ? n.unread : 0} />
+          <CoverCard href="/novel/{n.id}" title={n.title} cover={coverSrc(n.kind, n.sourceId, n.cover)} unread={settings.values.showUnreadBadge ? n.unread : 0} />
         {/each}
       </div>
     {/if}
@@ -132,6 +141,7 @@
 
 <style>
   .search { width: min(320px, 40vw); }
+  .kinds { display: flex; gap: 6px; margin-right: 8px; }
   .tabs {
     display: flex;
     gap: 4px;

@@ -3,7 +3,8 @@
   // Chapters default to chapter-1-first, like the Android app does for novels.
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
-  import { api, errorText, type Category, type Chapter, type NovelView } from "$lib/api";
+  import { api, errorText, readerHref, type Category, type Chapter, type NovelView } from "$lib/api";
+  import { coverSrc } from "$lib/manga";
   import Dialog from "$lib/components/Dialog.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import { toast } from "$lib/components/Toasts.svelte";
@@ -187,7 +188,7 @@
     <button class="icon-btn" title="Back" onclick={() => history.back()}><Icon name="arrow_back" /></button>
     {#if selected.size}
       <h1>{selected.size} selected</h1>
-      <button class="icon-btn" title="Download" onclick={() => download([...selected])}><Icon name="download" /></button>
+      {#if view?.novel.kind !== "manga"}<button class="icon-btn" title="Download" onclick={() => download([...selected])}><Icon name="download" /></button>{/if}
       {#if selectedList.some((c) => downloaded.has(c.id))}
         <button class="icon-btn" title="Delete downloads" onclick={() => deleteDownloads([...selected])}><Icon name="delete" /></button>
       {/if}
@@ -197,7 +198,7 @@
       <button class="icon-btn" title="Clear selection" onclick={() => (selected = new Set())}><Icon name="close" /></button>
     {:else}
       <span style="flex: 1"></span>
-      {#if view}
+      {#if view && view.novel.kind !== "manga"}
         <div class="menu-wrap">
           <button class="icon-btn" title="Download" onclick={() => (showDlMenu = !showDlMenu)}><Icon name="download" /></button>
           {#if showDlMenu}
@@ -232,14 +233,14 @@
         <div class="head">
           <div class="cover">
             {#if n.cover && !coverFailed}
-              <img src={n.cover} alt="" referrerpolicy="no-referrer" onerror={() => (coverFailed = true)} />
+              <img src={coverSrc(n.kind, n.sourceId, n.cover)} alt="" referrerpolicy="no-referrer" onerror={() => (coverFailed = true)} />
             {:else}<div class="ph"><Icon name="menu_book" size={48} /></div>{/if}
           </div>
           <div class="meta">
             <h2 class="title-large">{n.title}</h2>
             {#if n.author}<div class="body-medium"><Icon name="edit" size={16} /> {n.author}</div>{/if}
             <div class="body-medium muted">
-              {#if n.status}<Icon name="schedule" size={16} /> {n.status} · {/if}{view.source?.name ?? "Source not installed"}
+              {#if n.status}<Icon name="schedule" size={16} /> {n.status} · {/if}{view.sourceName ?? "Source not installed"}
             </div>
           </div>
         </div>
@@ -280,7 +281,7 @@
           </button>
         </div>
         {#if nextChapter}
-          <a class="btn resume" href="/reader/{nextChapter.id}">
+          <a class="btn resume" href={readerHref(n.kind, nextChapter.id)}>
             <Icon name="play_arrow" fill />{anyRead ? "Continue" : "Start"} · {nextChapter.name}
           </a>
         {/if}
@@ -294,7 +295,7 @@
             {#each shown as c (c.id)}
               {@const dl = downloads.status[c.id]}
               <li class:read={c.read} class:sel={selected.has(c.id)}>
-                <a class="row" href="/reader/{c.id}" onclick={(e) => onRowClick(e, c)}>
+                <a class="row" href={readerHref(view.novel.kind, c.id)} onclick={(e) => onRowClick(e, c)}>
                   <div class="text">
                     <div class="body-medium name">
                       {#if c.bookmark}<Icon name="bookmark" fill size={16} class="bm" />{/if}
@@ -320,7 +321,7 @@
                   <button class="icon-btn" title={c.bookmark ? "Remove bookmark" : "Bookmark"} onclick={() => setBookmark([c.id], !c.bookmark)}><Icon name="bookmark" fill={c.bookmark} size={20} /></button>
                   <button class="icon-btn" title={c.read ? "Mark as unread" : "Mark as read"} onclick={() => setRead([c.id], !c.read)}><Icon name={c.read ? "remove_done" : "done_all"} size={20} /></button>
                   <button class="icon-btn" title="Mark previous as read" onclick={() => markPreviousRead(c)}><Icon name="vertical_align_top" size={20} /></button>
-                  {#if !downloaded.has(c.id) && !dl}
+                  {#if !downloaded.has(c.id) && !dl && view.novel.kind !== "manga"}
                     <button class="icon-btn" title="Download" onclick={() => download([c.id])}><Icon name="download" size={20} /></button>
                   {/if}
                 </div>

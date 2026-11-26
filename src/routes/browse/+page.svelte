@@ -6,6 +6,10 @@
   import SourceIcon from "$lib/components/SourceIcon.svelte";
   import { toast } from "$lib/components/Toasts.svelte";
   import { sources } from "$lib/sources.svelte";
+  import MangaBrowse from "$lib/components/MangaBrowse.svelte";
+  import { page } from "$app/state";
+
+  let kind = $state<"novels" | "manga">(page.url.searchParams.get("kind") === "manga" ? "manga" : "novels");
 
   let tab = $state<"sources" | "extensions">("sources");
   let filter = $state("");
@@ -86,9 +90,16 @@
 <div class="screen">
   <header class="top-bar">
     <h1>Browse</h1>
+    <div class="seg">
+      <button class:on={kind === "novels"} onclick={() => (kind = "novels")}><Icon name="menu_book" size={18} />Novels</button>
+      <button class:on={kind === "manga"} onclick={() => (kind = "manga")}><Icon name="auto_stories" size={18} />Manga</button>
+    </div>
     <input class="text-field search" placeholder="Search sources" bind:value={filter} />
   </header>
 
+  {#if kind === "manga"}
+    <MangaBrowse {filter} />
+  {:else}
   <div class="tabs">
     <button class:on={tab === "sources"} onclick={() => (tab = "sources")}>Sources</button>
     <button class:on={tab === "extensions"} onclick={() => (tab = "extensions")}>
@@ -169,12 +180,17 @@
       <p class="body-small muted note">Royal Road and Webnovel are behind a Cloudflare check that the desktop app can't pass yet.</p>
     {/if}
   </div>
+  {/if}
 </div>
 
 <style>
   .search {
     width: min(320px, 40vw);
   }
+  .seg { display: flex; border: 1px solid var(--outline); border-radius: 20px; overflow: hidden; margin-right: 8px; }
+  .seg button { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: none; background: none; color: var(--on-surface-variant); font-weight: 500; }
+  .seg button + button { border-left: 1px solid var(--outline); }
+  .seg button.on { background: var(--secondary-container); color: var(--on-secondary-container); }
   .tabs {
     display: flex;
     gap: 8px;

@@ -3,6 +3,8 @@
   import { api, type HistoryItem } from "$lib/api";
   import Dialog from "$lib/components/Dialog.svelte";
   import Icon from "$lib/components/Icon.svelte";
+  import { readerHref } from "$lib/api";
+  import { coverSrc } from "$lib/manga";
   import { formatTime, groupByDay } from "$lib/format";
 
   let items = $state<HistoryItem[]>([]);
@@ -46,8 +48,8 @@
       <ul>
         {#each g.items as h (h.chapter.id)}
           <li>
-            <a class="row" href="/reader/{h.chapter.id}">
-              <div class="thumb">{#if h.novelCover}<img src={h.novelCover} alt="" referrerpolicy="no-referrer" />{/if}</div>
+            <a class="row" href={readerHref(h.kind, h.chapter.id)}>
+              <div class="thumb">{#if h.novelCover}<img src={coverSrc(h.kind, h.sourceId, h.novelCover)} alt="" referrerpolicy="no-referrer" />{/if}</div>
               <div class="text">
                 <div class="body-medium ellipsis">{h.novelTitle}</div>
                 <!-- "Ch. 53 - 2:09 PM • 34%": percent only for 1..99, like Android. -->
