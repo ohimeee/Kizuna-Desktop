@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod commands;
 pub mod db;
 pub mod downloads;
@@ -97,6 +98,7 @@ pub fn run() {
             commands::settings_get,
             commands::settings_set,
             commands::now_ms,
+            commands::backup_import,
             commands::manga_engine_status,
             commands::manga_engine_install,
             commands::manga_engine_remove,

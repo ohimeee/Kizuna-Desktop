@@ -21,7 +21,8 @@ Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Deskto
   (no password), then `npm run tauri build`; publish setup.exe, msi, both `.sig`, and `latest.json`.
 - Extension host (Kotlin, `ext-host/`): PowerShell, `$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'`,
   `.\gradlew.bat :host:fatJar`. Never pipe gradlew through `tail`. JBR can't `jlink` (no jmods).
-- Tests: `npm test`, `cargo test --lib` (in src-tauri), `cargo run --example smoke -- D:\Coding\Kizuna\novel-sources`.
+- Tests: `npm test` (run it from `D:\...`: a lowercase `d:\` working dir loads vitest twice and fails with
+  "Cannot read properties of undefined (reading 'config')"), `cargo test --lib` (in src-tauri), `cargo run --example smoke -- D:\Coding\Kizuna\novel-sources`.
 
 ## Phase 4, manga add-on (own engine): done
 `ext-host/` runs Mihon extensions (Suwayomi's AndroidCompat + source API, MPL-2.0, see `ext-host/NOTICE.md`);

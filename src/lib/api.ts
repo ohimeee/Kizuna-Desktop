@@ -95,9 +95,21 @@ export interface UpdateItem { chapter: Chapter; novelTitle: string; novelCover: 
 export const readerHref = (kind: string | undefined, chapterId: number) =>
   kind === "manga" ? `/manga-reader/${chapterId}` : `/reader/${chapterId}`;
 export interface LibraryUpdateResult { newChapters: number; checked: number; errors: string[] }
+export interface BackupImportResult {
+  novels: number;
+  manga: number;
+  chapters: number;
+  history: number;
+  categoriesCreated: number;
+  missingSources: { name: string; kind: "novel" | "manga"; entries: number }[];
+  /** Extension repo URLs from the backup. */
+  repos: string[];
+}
 
 export const api = {
   sourcesInstalled: () => invoke<InstalledSource[]>("sources_installed"),
+  /** The backup file's bytes go as the raw request body. */
+  backupImport: (bytes: Uint8Array) => invoke<BackupImportResult>("backup_import", bytes),
   sourcesIndex: (url?: string) => invoke<IndexEntry[]>("sources_index", { url }),
   sourceInstall: (entry: IndexEntry) => invoke<SourceInfo>("source_install", { entry }),
   sourceUninstall: (sourceId: string) => invoke<void>("source_uninstall", { sourceId }),

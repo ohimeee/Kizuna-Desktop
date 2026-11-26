@@ -239,6 +239,15 @@ impl Db {
         self.conn.lock().expect("db mutex poisoned")
     }
 
+    /// Runs `f` in one transaction (committed when it returns Ok).
+    pub fn transaction<T>(&self, f: impl FnOnce(&rusqlite::Transaction) -> Result<T>) -> Result<T> {
+        let mut conn = self.conn();
+        let tx = conn.transaction()?;
+        let out = f(&tx)?;
+        tx.commit()?;
+        Ok(out)
+    }
+
     // ---- novels ------------------------------------------------------------------------
 
     /// Finds or creates the local row for a novel seen in a source listing; refreshes its

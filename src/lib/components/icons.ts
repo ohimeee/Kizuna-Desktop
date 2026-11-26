@@ -136,36 +136,38 @@ import i132 from "@material-symbols/svg-400/rounded/select_all.svg?raw";
 import i133 from "@material-symbols/svg-400/rounded/select_all-fill.svg?raw";
 import i134 from "@material-symbols/svg-400/rounded/settings.svg?raw";
 import i135 from "@material-symbols/svg-400/rounded/settings-fill.svg?raw";
-import i136 from "@material-symbols/svg-400/rounded/skip_next.svg?raw";
-import i137 from "@material-symbols/svg-400/rounded/skip_next-fill.svg?raw";
-import i138 from "@material-symbols/svg-400/rounded/skip_previous.svg?raw";
-import i139 from "@material-symbols/svg-400/rounded/skip_previous-fill.svg?raw";
-import i140 from "@material-symbols/svg-400/rounded/sort.svg?raw";
-import i141 from "@material-symbols/svg-400/rounded/sort-fill.svg?raw";
-import i142 from "@material-symbols/svg-400/rounded/sync.svg?raw";
-import i143 from "@material-symbols/svg-400/rounded/sync-fill.svg?raw";
-import i144 from "@material-symbols/svg-400/rounded/text_fields.svg?raw";
-import i145 from "@material-symbols/svg-400/rounded/text_fields-fill.svg?raw";
-import i146 from "@material-symbols/svg-400/rounded/travel_explore.svg?raw";
-import i147 from "@material-symbols/svg-400/rounded/travel_explore-fill.svg?raw";
-import i148 from "@material-symbols/svg-400/rounded/tune.svg?raw";
-import i149 from "@material-symbols/svg-400/rounded/tune-fill.svg?raw";
-import i150 from "@material-symbols/svg-400/rounded/update.svg?raw";
-import i151 from "@material-symbols/svg-400/rounded/update-fill.svg?raw";
-import i152 from "@material-symbols/svg-400/rounded/upload.svg?raw";
-import i153 from "@material-symbols/svg-400/rounded/upload-fill.svg?raw";
-import i154 from "@material-symbols/svg-400/rounded/vertical_align_top.svg?raw";
-import i155 from "@material-symbols/svg-400/rounded/vertical_align_top-fill.svg?raw";
-import i156 from "@material-symbols/svg-400/rounded/visibility.svg?raw";
-import i157 from "@material-symbols/svg-400/rounded/visibility-fill.svg?raw";
-import i158 from "@material-symbols/svg-400/rounded/visibility_off.svg?raw";
-import i159 from "@material-symbols/svg-400/rounded/visibility_off-fill.svg?raw";
-import i160 from "@material-symbols/svg-400/rounded/warning.svg?raw";
-import i161 from "@material-symbols/svg-400/rounded/warning-fill.svg?raw";
-import i162 from "@material-symbols/svg-400/rounded/width_normal.svg?raw";
-import i163 from "@material-symbols/svg-400/rounded/width_normal-fill.svg?raw";
-import i164 from "@material-symbols/svg-400/rounded/zoom_in.svg?raw";
-import i165 from "@material-symbols/svg-400/rounded/zoom_in-fill.svg?raw";
+import i136 from "@material-symbols/svg-400/rounded/settings_backup_restore.svg?raw";
+import i137 from "@material-symbols/svg-400/rounded/settings_backup_restore-fill.svg?raw";
+import i138 from "@material-symbols/svg-400/rounded/skip_next.svg?raw";
+import i139 from "@material-symbols/svg-400/rounded/skip_next-fill.svg?raw";
+import i140 from "@material-symbols/svg-400/rounded/skip_previous.svg?raw";
+import i141 from "@material-symbols/svg-400/rounded/skip_previous-fill.svg?raw";
+import i142 from "@material-symbols/svg-400/rounded/sort.svg?raw";
+import i143 from "@material-symbols/svg-400/rounded/sort-fill.svg?raw";
+import i144 from "@material-symbols/svg-400/rounded/sync.svg?raw";
+import i145 from "@material-symbols/svg-400/rounded/sync-fill.svg?raw";
+import i146 from "@material-symbols/svg-400/rounded/text_fields.svg?raw";
+import i147 from "@material-symbols/svg-400/rounded/text_fields-fill.svg?raw";
+import i148 from "@material-symbols/svg-400/rounded/travel_explore.svg?raw";
+import i149 from "@material-symbols/svg-400/rounded/travel_explore-fill.svg?raw";
+import i150 from "@material-symbols/svg-400/rounded/tune.svg?raw";
+import i151 from "@material-symbols/svg-400/rounded/tune-fill.svg?raw";
+import i152 from "@material-symbols/svg-400/rounded/update.svg?raw";
+import i153 from "@material-symbols/svg-400/rounded/update-fill.svg?raw";
+import i154 from "@material-symbols/svg-400/rounded/upload.svg?raw";
+import i155 from "@material-symbols/svg-400/rounded/upload-fill.svg?raw";
+import i156 from "@material-symbols/svg-400/rounded/vertical_align_top.svg?raw";
+import i157 from "@material-symbols/svg-400/rounded/vertical_align_top-fill.svg?raw";
+import i158 from "@material-symbols/svg-400/rounded/visibility.svg?raw";
+import i159 from "@material-symbols/svg-400/rounded/visibility-fill.svg?raw";
+import i160 from "@material-symbols/svg-400/rounded/visibility_off.svg?raw";
+import i161 from "@material-symbols/svg-400/rounded/visibility_off-fill.svg?raw";
+import i162 from "@material-symbols/svg-400/rounded/warning.svg?raw";
+import i163 from "@material-symbols/svg-400/rounded/warning-fill.svg?raw";
+import i164 from "@material-symbols/svg-400/rounded/width_normal.svg?raw";
+import i165 from "@material-symbols/svg-400/rounded/width_normal-fill.svg?raw";
+import i166 from "@material-symbols/svg-400/rounded/zoom_in.svg?raw";
+import i167 from "@material-symbols/svg-400/rounded/zoom_in-fill.svg?raw";
 
 export const ICONS: Record<string, string> = {
   "add": i0,
@@ -304,34 +306,36 @@ export const ICONS: Record<string, string> = {
   "select_all-fill": i133,
   "settings": i134,
   "settings-fill": i135,
-  "skip_next": i136,
-  "skip_next-fill": i137,
-  "skip_previous": i138,
-  "skip_previous-fill": i139,
-  "sort": i140,
-  "sort-fill": i141,
-  "sync": i142,
-  "sync-fill": i143,
-  "text_fields": i144,
-  "text_fields-fill": i145,
-  "travel_explore": i146,
-  "travel_explore-fill": i147,
-  "tune": i148,
-  "tune-fill": i149,
-  "update": i150,
-  "update-fill": i151,
-  "upload": i152,
-  "upload-fill": i153,
-  "vertical_align_top": i154,
-  "vertical_align_top-fill": i155,
-  "visibility": i156,
-  "visibility-fill": i157,
-  "visibility_off": i158,
-  "visibility_off-fill": i159,
-  "warning": i160,
-  "warning-fill": i161,
-  "width_normal": i162,
-  "width_normal-fill": i163,
-  "zoom_in": i164,
-  "zoom_in-fill": i165,
+  "settings_backup_restore": i136,
+  "settings_backup_restore-fill": i137,
+  "skip_next": i138,
+  "skip_next-fill": i139,
+  "skip_previous": i140,
+  "skip_previous-fill": i141,
+  "sort": i142,
+  "sort-fill": i143,
+  "sync": i144,
+  "sync-fill": i145,
+  "text_fields": i146,
+  "text_fields-fill": i147,
+  "travel_explore": i148,
+  "travel_explore-fill": i149,
+  "tune": i150,
+  "tune-fill": i151,
+  "update": i152,
+  "update-fill": i153,
+  "upload": i154,
+  "upload-fill": i155,
+  "vertical_align_top": i156,
+  "vertical_align_top-fill": i157,
+  "visibility": i158,
+  "visibility-fill": i159,
+  "visibility_off": i160,
+  "visibility_off-fill": i161,
+  "warning": i162,
+  "warning-fill": i163,
+  "width_normal": i164,
+  "width_normal-fill": i165,
+  "zoom_in": i166,
+  "zoom_in-fill": i167,
 };

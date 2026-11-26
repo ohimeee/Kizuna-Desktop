@@ -9,6 +9,7 @@
   import { toast } from "$lib/components/Toasts.svelte";
   import { mangaEngine } from "$lib/mangaEngine.svelte";
   import Dialog from "$lib/components/Dialog.svelte";
+  import { api, errorText, type BackupImportResult } from "$lib/api";
 
   async function checkUpdates() {
     const found = await updater.check();
@@ -22,6 +23,35 @@
 
   const mb = (bytes: number) => `${Math.round(bytes / 1048576)} MB`;
   const engine = $derived(mangaEngine.status);
+
+  let fileInput: HTMLInputElement;
+  let importing = $state(false);
+  let imported = $state<BackupImportResult | null>(null);
+  let reposAdded = $state(0);
+  let importDialog = $state(false);
+
+  async function importBackup(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    importing = true;
+    try {
+      const result = await api.backupImport(new Uint8Array(await file.arrayBuffer()));
+      const known = new Set(settings.values.mangaRepos);
+      const fresh = [...new Set(result.repos.map((r) => r.trim()))].filter((r) => r && !known.has(r));
+      if (fresh.length) settings.set("mangaRepos", [...settings.values.mangaRepos, ...fresh]);
+      reposAdded = fresh.length;
+      imported = result;
+      importDialog = true;
+    } catch (err) {
+      toast(`Couldn't import: ${errorText(err)}`);
+    } finally {
+      importing = false;
+    }
+  }
+
+  const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
   let removeDialog = $state(false);
   function removeEngine() {
@@ -81,6 +111,10 @@
           <Icon name="download" /><span>Download queue</span>
           {#if downloads.count}<span class="badge">{downloads.count}</span>{/if}
         </a>
+        <button class="row link btn-row" disabled={importing} onclick={() => fileInput.click()}>
+          <Icon name="settings_backup_restore" /><span>{importing ? "Importing…" : "Import backup from the phone app"}</span>
+        </button>
+        <input bind:this={fileInput} type="file" accept=".tachibk,.proto.gz,.gz" hidden onchange={importBackup} />
       </section>
 
       <section>
@@ -141,6 +175,31 @@
   </div>
 </div>
 
+<Dialog bind:open={importDialog} title="Backup imported" width={440}>
+  {#if imported}
+    <p>
+      Added {plural(imported.novels, "novel")} and {imported.manga} manga, with {plural(imported.chapters, "chapter")}
+      and {plural(imported.history, "history entry", "history entries")}.
+      {#if imported.categoriesCreated}Created {plural(imported.categoriesCreated, "category", "categories")}.{/if}
+      {#if reposAdded}Added {plural(reposAdded, "extension repo")}.{/if}
+    </p>
+    {#if imported.missingSources.length}
+      <p class="body-small muted">
+        These sources aren't installed yet. Their entries are in your library but won't open until you
+        install them in Browse (novel sources) or Browse → Manga → Extensions (manga):
+      </p>
+      <ul class="missing">
+        {#each imported.missingSources as m}
+          <li><span>{m.name}</span><span class="muted body-small">{m.kind} · {plural(m.entries, "entry", "entries")}</span></li>
+        {/each}
+      </ul>
+    {/if}
+  {/if}
+  {#snippet actions()}
+    <button class="btn" onclick={() => (importDialog = false)}>Done</button>
+  {/snippet}
+</Dialog>
+
 <Dialog bind:open={removeDialog} title="Remove the manga engine?">
   Your extensions and manga library stay, but manga won't open until you enable the engine again.
   {#snippet actions()}
@@ -163,6 +222,8 @@
   .seg button { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: none; background: none; color: var(--on-surface-variant); }
   .seg button + button { border-left: 1px solid var(--outline); }
   .seg button.on { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .missing { list-style: none; margin: 8px 0 0; padding: 0; max-height: 220px; overflow: auto; }
+  .missing li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
   .engine-text { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; }
   .engine-actions { display: flex; gap: 8px; }
   .spinner.small { width: 24px; height: 24px; border-width: 3px; }

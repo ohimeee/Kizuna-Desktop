@@ -2332,6 +2332,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "ego-tree",
+ "flate2",
  "md5",
  "reqwest",
  "reqwest_cookie_store",

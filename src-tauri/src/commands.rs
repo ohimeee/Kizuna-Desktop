@@ -324,11 +324,17 @@ pub async fn library_update(state: Shared<'_>) -> CmdResult<LibraryUpdateResult>
         let mut res = LibraryUpdateResult { new_chapters: 0, checked: 0, errors: vec![] };
         for item in s.db.library()? {
             let n = item.novel;
+            // Never refreshed here (e.g. imported from a phone backup): also fetch details once,
+            // since a backup's cover URL may be long gone from the site (HTTP 410).
+            let details = n.last_update == 0;
             let outcome = (|| -> anyhow::Result<usize> {
                 if n.kind == "manga" {
-                    return manga_refresh(s, &n, false, true);
+                    return manga_refresh(s, &n, details, true);
                 }
                 let path = s.plugins.path_for(&n.source_id)?;
+                if details {
+                    s.db.apply_details(n.id, &plugins::details(&path, &n.url)?)?;
+                }
                 let list = plugins::chapters(&path, &n.url)?;
                 s.db.sync_chapters(n.id, &list)
             })();
@@ -561,6 +567,10 @@ pub async fn manga_repo_list(state: Shared<'_>, repos: Vec<String>) -> CmdResult
                 Err(e) => out.errors.push(format!("{r}: {e:#}")),
             }
         }
+        // The same repo under two URLs (phone backups often have both GitHub forms), or two repos
+        // with the same extension: list each package once, newest version first.
+        out.extensions.sort_by(|a, b| a.pkg.cmp(&b.pkg).then(b.code.cmp(&a.code)));
+        out.extensions.dedup_by(|a, b| a.pkg == b.pkg);
         Ok(out)
     })
     .await
@@ -686,4 +696,51 @@ pub async fn manga_pages(state: Shared<'_>, chapter_id: i64) -> CmdResult<Vec<Ma
 #[tauri::command]
 pub async fn manga_sources_cached(state: Shared<'_>) -> CmdResult<serde_json::Value> {
     blocking(&state, |s| Ok(s.db.settings()?.get(MANGA_SOURCE_CACHE).cloned().unwrap_or(serde_json::json!({})))).await
+}
+
+// ---- backup import -------------------------------------------------------------------------
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupImportResult {
+    #[serde(flatten)]
+    summary: crate::backup::ImportSummary,
+    /// Extension repo URLs from the backup, for the UI to add to its `mangaRepos` setting.
+    repos: Vec<String>,
+}
+
+/// Imports a Kizuna Android / Mihon backup. The request body is the file's raw bytes.
+#[tauri::command]
+pub async fn backup_import(state: Shared<'_>, request: tauri::ipc::Request<'_>) -> CmdResult<BackupImportResult> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("expected the backup file's bytes".into());
+    };
+    let bytes = bytes.clone();
+    blocking(&state, move |s| {
+        let backup = crate::backup::parse(&bytes)?;
+        let installed_novel: std::collections::HashSet<String> =
+            s.plugins.list().into_iter().filter_map(|(_, info)| info.ok().map(|i| i.id)).collect();
+        let installed_manga: std::collections::HashSet<String> = s
+            .db
+            .settings()?
+            .get(MANGA_SOURCE_CACHE)
+            .and_then(|v| v.as_object())
+            .map(|m| m.keys().cloned().collect())
+            .unwrap_or_default();
+        let mut novel = installed_novel.clone();
+        match plugins::fetch_index(plugins::DEFAULT_INDEX_URL) {
+            Ok(index) => novel.extend(index.iter().map(|e| plugins::generate_id(&e.id, &e.lang).to_string())),
+            Err(e) => {
+                // Without the catalog, an uninstalled novel plugin would look like a manga source.
+                let unknown = backup.manga.iter().map(|m| m.source.to_string()).any(|id| !novel.contains(&id) && !installed_manga.contains(&id));
+                if unknown {
+                    return Err(e.context("couldn't load the novel source list to tell novels from manga; check your connection"));
+                }
+            }
+        }
+        let kinds = crate::backup::SourceKinds { novel, installed_novel, installed_manga };
+        let (summary, repos) = crate::backup::import(&s.db, &backup, &kinds)?;
+        Ok(BackupImportResult { summary, repos })
+    })
+    .await
 }
