@@ -17,8 +17,13 @@
     // The window starts hidden (tauri.conf.json) so it never flashes white; the splash in
     // app.html is already painted by now, so show it.
     getCurrentWindow().show().catch(() => {});
+    const shownAt = performance.now();
     settings.load().then(async () => {
       await tick();
+      // Startup is quicker than a blink, so hold the splash long enough to be seen (asked
+      // 2026-11-26: ~0.8 s). The app keeps loading underneath; nothing waits on this.
+      const SPLASH_MIN_MS = 800;
+      await new Promise((r) => setTimeout(r, Math.max(0, SPLASH_MIN_MS - (performance.now() - shownAt))));
       const splash = document.getElementById("splash");
       if (splash) {
         splash.classList.add("hide");
