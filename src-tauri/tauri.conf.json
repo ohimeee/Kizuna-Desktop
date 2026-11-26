@@ -27,13 +27,31 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "nsis",
+      "msi"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "ohimeee",
+    "copyright": "Kizuna contributors. Apache-2.0.",
+    "category": "Utility",
+    "shortDescription": "Light novel reader",
+    "longDescription": "Kizuna Desktop: read light novels from the same source plugins as the Kizuna Android app.",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico"
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
   }
 }
