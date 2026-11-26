@@ -10,7 +10,7 @@ export type LibrarySort = "title" | "lastRead" | "unread" | "dateAdded" | "total
 
 export const defaults = {
   // App
-  appTheme: "tachiyomi",
+  appTheme: "kizuna",
   themeMode: "system" as ThemeMode,
   pureBlack: false,
   libraryColumns: 0, // 0 = auto by width

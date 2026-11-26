@@ -1,6 +1,7 @@
 <script lang="ts">
   // Browse → Manga: Sources (installed extension sources) and Extensions (repos, install/update).
   import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
   import { errorText } from "$lib/api";
   import Icon from "$lib/components/Icon.svelte";
   import SourceIcon from "$lib/components/SourceIcon.svelte";
@@ -145,6 +146,12 @@
                 <div class="body-large">{s.name}</div>
                 <div class="body-small muted">{s.lang.toUpperCase()}</div>
               </div>
+              <div class="actions">
+                <button class="btn text" onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto(`/browse/manga/${s.id}?tab=popular`); }}>Popular</button>
+                {#if s.supportsLatest}
+                  <button class="btn text" onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto(`/browse/manga/${s.id}?tab=latest`); }}>Latest</button>
+                {/if}
+              </div>
             </a>
           </li>
         {/each}
@@ -219,11 +226,13 @@
   .tabs { display: flex; gap: 8px; padding: 0 24px; border-bottom: 1px solid var(--outline-variant); flex: none; }
   .tabs button { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 16px; border: none; background: none; color: var(--on-surface-variant); font-weight: 500; border-bottom: 3px solid transparent; }
   .tabs button.on { color: var(--primary); border-bottom-color: var(--primary); }
-  .list { list-style: none; margin: 0; padding: 8px 12px; max-width: 900px; }
+  .list { list-style: none; margin: 0; padding: 8px 12px; }
   .row { display: flex; align-items: center; gap: 16px; padding: 10px 12px; border-radius: var(--radius-m); }
   a.row:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
   .text { flex: 1; min-width: 0; }
-  .repos { margin: 16px 24px 0; padding: 16px; border-radius: var(--radius-l); background: var(--surface-container-low); max-width: 860px; }
+  .actions { display: flex; flex: none; gap: 4px; }
+  .actions .btn { flex: none; width: auto; }
+  .repos { margin: 16px 24px 0; padding: 16px; border-radius: var(--radius-l); background: var(--surface-container-low); }
   .repos h2 { margin: 0 0 4px; }
   .repos p { margin: 0 0 8px; }
   .repo-row { display: flex; align-items: center; gap: 8px; color: var(--on-surface); }

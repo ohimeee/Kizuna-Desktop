@@ -78,7 +78,7 @@
 <style>
   .search { width: min(320px, 40vw); }
   .day { margin: 16px 24px 4px; color: var(--on-surface-variant); }
-  ul { list-style: none; margin: 0; padding: 0 12px; max-width: 900px; }
+  ul { list-style: none; margin: 0; padding: 0 12px; }
   li { display: flex; align-items: center; border-radius: var(--radius-m); padding-right: 8px; }
   li:hover { background: color-mix(in srgb, var(--on-surface) 6%, transparent); }
   .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; padding: 8px 12px; }

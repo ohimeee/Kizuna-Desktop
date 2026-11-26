@@ -126,12 +126,18 @@
                   <div class="body-large">{s.name}</div>
                   <div class="body-small muted">{s.lang.toUpperCase()}</div>
                 </div>
-                {#if s.supportsLatest}
+                <div class="actions">
                   <button
                     class="btn text"
-                    onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto(`/browse/${s.id}?tab=latest`); }}
-                  >Latest</button>
-                {/if}
+                    onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto(`/browse/${s.id}?tab=popular`); }}
+                  >Popular</button>
+                  {#if s.supportsLatest}
+                    <button
+                      class="btn text"
+                      onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto(`/browse/${s.id}?tab=latest`); }}
+                    >Latest</button>
+                  {/if}
+                </div>
               </a>
             </li>
           {/each}
@@ -218,7 +224,6 @@
     list-style: none;
     margin: 0;
     padding: 8px 12px;
-    max-width: 900px;
   }
   .row {
     display: flex;
@@ -233,6 +238,15 @@
   .text {
     flex: 1;
     min-width: 0;
+  }
+  .actions {
+    display: flex;
+    flex: none;
+    gap: 4px;
+  }
+  .actions .btn {
+    flex: none;
+    width: auto;
   }
   .section {
     margin: 16px 24px 0;

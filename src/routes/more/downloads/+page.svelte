@@ -67,7 +67,7 @@
 </div>
 
 <style>
-  ul { list-style: none; margin: 0; padding: 8px 16px; max-width: 860px; }
+  ul { list-style: none; margin: 0; padding: 8px 16px; }
   li { display: flex; align-items: center; gap: 16px; padding: 8px 12px; border-radius: var(--radius-m); color: var(--on-surface-variant); }
   li.active { background: var(--secondary-container); color: var(--on-secondary-container); }
   .text { flex: 1; min-width: 0; color: var(--on-surface); }

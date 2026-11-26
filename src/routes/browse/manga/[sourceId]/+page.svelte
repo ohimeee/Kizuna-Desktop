@@ -11,7 +11,7 @@
   let source = $state<CachedSource | null>(null);
 
   type Tab = "popular" | "latest" | "search";
-  let tab = $state<Tab>("popular");
+  let tab = $state<Tab>(page.url.searchParams.get("tab") === "latest" ? "latest" : "popular");
   let query = $state("");
   let items = $state<BrowseItem[]>([]);
   let pageNo = $state(0);

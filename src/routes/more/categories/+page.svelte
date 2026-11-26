@@ -87,7 +87,7 @@
 </Dialog>
 
 <style>
-  ul { list-style: none; margin: 0; padding: 8px 16px; max-width: 760px; }
+  ul { list-style: none; margin: 0; padding: 8px 16px; }
   li { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 16px; border-radius: var(--radius-m); background: var(--surface-container-low); margin-bottom: 8px; }
   .name { flex: 1; margin-left: 8px; }
   .full { width: 100%; }
