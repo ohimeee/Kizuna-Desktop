@@ -38,5 +38,10 @@ tasks.register<Jar>("fatJar") {
         exclude("native/Linux/**", "native/Mac/**")
         exclude("com/sun/jna/linux-*/**", "com/sun/jna/darwin*/**", "com/sun/jna/aix-*/**", "com/sun/jna/freebsd-*/**",
             "com/sun/jna/openbsd-*/**", "com/sun/jna/sunos-*/**", "com/sun/jna/dragonflybsd-*/**", "com/sun/jna/win32-aarch64/**")
+        exclude("native/Windows/x86/**", "com/sun/jna/win32-x86/**", "jni/aarch64/**", "jni/x86_64/**", "jni/amd64/*.so")
+        // Android framework UI resources from the android-jar stubs: extensions never read them.
+        exclude("res/**", "resources.arsc")
+        // Fonts Typeface.java never loads (it uses the upright Noto variable fonts only).
+        exclude("font/NotoSans/NotoColorEmoji-Regular.ttf", "font/NotoSans/*Italic*")
     }
 }

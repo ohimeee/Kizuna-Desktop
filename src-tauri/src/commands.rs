@@ -474,18 +474,72 @@ pub struct MangaEngineStatus {
     running: bool,
     java: String,
     jar: String,
+    /// Installed download's version (None when not installed or running from dev overrides).
+    version: Option<u32>,
+    /// Version this app build ships with; newer than `version` means "update available".
+    latest: u32,
+    /// Bytes to download.
+    download_size: u64,
+    /// Using KIZUNA_JAVA / KIZUNA_EXT_HOST_JAR instead of the download.
+    dev: bool,
+}
+
+fn engine_status(s: &AppState) -> MangaEngineStatus {
+    let p = s.manga.paths();
+    MangaEngineStatus {
+        installed: p.installed(),
+        running: s.manga.is_running(),
+        java: p.java.display().to_string(),
+        jar: p.jar.display().to_string(),
+        version: manga::engine::installed_version(&p.engine_dir),
+        latest: manga::engine::ENGINE_VERSION,
+        download_size: manga::engine::ENGINE_SIZE,
+        dev: p.dev,
+    }
 }
 
 #[tauri::command]
 pub async fn manga_engine_status(state: Shared<'_>) -> CmdResult<MangaEngineStatus> {
+    blocking(&state, |s| Ok(engine_status(s))).await
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EngineProgress {
+    done: u64,
+    total: u64,
+}
+
+static ENGINE_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Downloads and installs (or updates) the manga engine, emitting `manga-engine-progress`.
+#[tauri::command]
+pub async fn manga_engine_install(state: Shared<'_>, app: tauri::AppHandle) -> CmdResult<MangaEngineStatus> {
+    use std::sync::atomic::Ordering;
+    use tauri::Emitter;
+    blocking(&state, move |s| {
+        anyhow::ensure!(!ENGINE_BUSY.swap(true, Ordering::SeqCst), "The manga engine is already being installed");
+        let result = (|| {
+            s.manga.stop();
+            let dir = s.manga.paths().engine_dir;
+            manga::engine::install(&dir, |done, total| {
+                let _ = app.emit("manga-engine-progress", EngineProgress { done, total });
+            })
+        })();
+        ENGINE_BUSY.store(false, Ordering::SeqCst);
+        result?;
+        Ok(engine_status(s))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn manga_engine_remove(state: Shared<'_>) -> CmdResult<MangaEngineStatus> {
     blocking(&state, |s| {
-        let p = s.manga.paths();
-        Ok(MangaEngineStatus {
-            installed: p.installed(),
-            running: s.manga.is_running(),
-            java: p.java.display().to_string(),
-            jar: p.jar.display().to_string(),
-        })
+        anyhow::ensure!(!ENGINE_BUSY.load(std::sync::atomic::Ordering::SeqCst), "The manga engine is being installed");
+        s.manga.stop();
+        manga::engine::remove(&s.manga.paths().engine_dir)?;
+        Ok(engine_status(s))
     })
     .await
 }

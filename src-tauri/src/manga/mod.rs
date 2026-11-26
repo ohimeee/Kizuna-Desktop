@@ -1,6 +1,7 @@
 //! Manga: Mihon extensions run by the extension host, with library data in Kizuna's own SQLite
 //! (novels table, `kind = 'manga'`), so novels and manga share one library.
 
+pub mod engine;
 pub mod host;
 pub mod images;
 

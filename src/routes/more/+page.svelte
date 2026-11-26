@@ -7,6 +7,8 @@
   import { downloads } from "$lib/downloads.svelte";
   import { updater } from "$lib/updater.svelte";
   import { toast } from "$lib/components/Toasts.svelte";
+  import { mangaEngine } from "$lib/mangaEngine.svelte";
+  import Dialog from "$lib/components/Dialog.svelte";
 
   async function checkUpdates() {
     const found = await updater.check();
@@ -16,6 +18,16 @@
 
   let version = $state("");
   onMount(async () => (version = await getVersion()));
+  onMount(() => { mangaEngine.refresh(); });
+
+  const mb = (bytes: number) => `${Math.round(bytes / 1048576)} MB`;
+  const engine = $derived(mangaEngine.status);
+
+  let removeDialog = $state(false);
+  function removeEngine() {
+    removeDialog = false;
+    mangaEngine.remove();
+  }
 
   const modes: { id: ThemeMode; label: string; icon: string }[] = [
     { id: "system", label: "System", icon: "contrast" },
@@ -72,6 +84,50 @@
       </section>
 
       <section>
+        <h2 class="label-large">Manga</h2>
+        <div class="row">
+          <div class="engine-text">
+            <span>Manga engine</span>
+            <span class="body-small muted">
+              {#if !engine}
+                Checking…
+              {:else if engine.dev}
+                Using the development engine (KIZUNA_JAVA / KIZUNA_EXT_HOST_JAR)
+              {:else if mangaEngine.busy === "installing"}
+                {mangaEngine.done > 0 && mangaEngine.done >= mangaEngine.total ? "Installing…" : `Downloading… ${mb(mangaEngine.done)} of ${mb(mangaEngine.total)}`}
+              {:else if mangaEngine.updateAvailable}
+                Update available (version {engine.latest})
+              {:else if engine.installed}
+                On{engine.version ? ` · version ${engine.version}` : ""}. Add extensions in Browse → Manga.
+              {:else}
+                Runs Mihon extensions for manga. One-time {mb(engine.downloadSize)} download.
+              {/if}
+            </span>
+          </div>
+          {#if engine && !engine.dev}
+            {#if mangaEngine.busy === "installing"}
+              <div class="spinner small"></div>
+            {:else if !engine.installed}
+              <button class="btn" onclick={() => mangaEngine.install()}><Icon name="download" size={18} />Enable manga</button>
+            {:else}
+              <div class="engine-actions">
+                {#if mangaEngine.updateAvailable}
+                  <button class="btn" onclick={() => mangaEngine.install()}>Update</button>
+                {/if}
+                <button class="btn text" disabled={!!mangaEngine.busy} onclick={() => (removeDialog = true)}>Remove</button>
+              </div>
+            {/if}
+          {/if}
+        </div>
+        {#if mangaEngine.busy === "installing"}
+          <progress class="engine-progress" max={mangaEngine.total || 1} value={mangaEngine.done}></progress>
+        {/if}
+        {#if mangaEngine.error}
+          <div class="body-small error-text">{mangaEngine.error}</div>
+        {/if}
+      </section>
+
+      <section>
         <h2 class="label-large">About</h2>
         <div class="row"><span>Kizuna Desktop</span><span class="muted">{version}</span></div>
         <button class="row link btn-row" disabled={updater.checking} onclick={checkUpdates}>
@@ -84,6 +140,14 @@
     </div>
   </div>
 </div>
+
+<Dialog bind:open={removeDialog} title="Remove the manga engine?">
+  Your extensions and manga library stay, but manga won't open until you enable the engine again.
+  {#snippet actions()}
+    <button class="btn text" onclick={() => (removeDialog = false)}>Cancel</button>
+    <button class="btn" onclick={removeEngine}>Remove</button>
+  {/snippet}
+</Dialog>
 
 <style>
   .content { max-width: 860px; padding: 0 24px 32px; }
@@ -99,6 +163,11 @@
   .seg button { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: none; background: none; color: var(--on-surface-variant); }
   .seg button + button { border-left: 1px solid var(--outline); }
   .seg button.on { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .engine-text { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; }
+  .engine-actions { display: flex; gap: 8px; }
+  .spinner.small { width: 24px; height: 24px; border-width: 3px; }
+  .engine-progress { width: 100%; height: 4px; accent-color: var(--primary); }
+  .error-text { color: var(--error); }
   .themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; margin: 8px 0 12px; }
   .theme { display: flex; flex-direction: column; align-items: center; gap: 6px; border: none; background: none; padding: 0; }
   .preview {

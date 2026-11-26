@@ -37,17 +37,22 @@ pub struct EnginePaths {
     pub java: PathBuf,
     pub jar: PathBuf,
     pub data: PathBuf,
+    /// Where the downloadable engine is installed.
+    pub engine_dir: PathBuf,
+    /// Java or the jar comes from the development overrides, not the download.
+    pub dev: bool,
 }
 
 impl EnginePaths {
     pub fn resolve(engine_dir: &Path, data: PathBuf) -> Self {
-        let java = std::env::var_os("KIZUNA_JAVA")
+        let java_env = std::env::var_os("KIZUNA_JAVA");
+        let jar_env = std::env::var_os("KIZUNA_EXT_HOST_JAR");
+        let dev = java_env.is_some() || jar_env.is_some();
+        let java = java_env
             .map(PathBuf::from)
             .unwrap_or_else(|| engine_dir.join("runtime").join("bin").join("java.exe"));
-        let jar = std::env::var_os("KIZUNA_EXT_HOST_JAR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| engine_dir.join("kizuna-ext-host.jar"));
-        Self { java, jar, data }
+        let jar = jar_env.map(PathBuf::from).unwrap_or_else(|| engine_dir.join("kizuna-ext-host.jar"));
+        Self { java, jar, data, engine_dir: engine_dir.to_path_buf(), dev }
     }
 
     pub fn installed(&self) -> bool {
@@ -108,7 +113,15 @@ impl ExtHost {
     pub fn stop(&self) {
         if let Some(mut r) = self.running.lock().unwrap().take() {
             drop(r.stdin); // EOF: the host finishes in-flight work and exits
-            std::thread::sleep(Duration::from_millis(300));
+            // Let it exit on its own: the JVM writes the startup cache (host.jsa) on exit, which
+            // takes a second or two the first time. Usually it's gone within ~100 ms.
+            let deadline = std::time::Instant::now() + Duration::from_secs(8);
+            while std::time::Instant::now() < deadline {
+                if matches!(r.child.try_wait(), Ok(Some(_))) {
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(50));
+            }
             let _ = r.child.kill();
             let _ = r.child.wait();
         }
@@ -135,7 +148,16 @@ impl ExtHost {
             .arg("-XX:+UnlockDiagnosticVMOptions")
             .arg("-XX:-BytecodeVerificationRemote")
             .arg("-Xmx768m")
-            .arg("--enable-native-access=ALL-UNNAMED")
+            // JNA loads native code. Not --enable-native-access=ALL-UNNAMED: that differs from
+            // how the runtime's base class archive was made and leaves the cache below empty.
+            .arg("--illegal-native-access=allow")
+            // Class-data cache for the host's own classes, made on the first run (~2 s once)
+            // and remade automatically when the jar or JVM changes: startup ~850 -> ~450 ms.
+            .arg(format!("-XX:SharedArchiveFile={}", paths.data.join("host.jsa").display()))
+            .arg("-XX:+AutoCreateSharedArchive")
+            // JVM log lines go to stdout, which is the JSON channel.
+            .arg("-Xlog:cds=off")
+            .arg("-Xlog:aot=off")
             .arg("-Dfile.encoding=UTF-8")
             .arg("-jar")
             .arg(&paths.jar)

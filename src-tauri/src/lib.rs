@@ -98,6 +98,8 @@ pub fn run() {
             commands::settings_set,
             commands::now_ms,
             commands::manga_engine_status,
+            commands::manga_engine_install,
+            commands::manga_engine_remove,
             commands::manga_repo_list,
             commands::manga_extensions,
             commands::manga_extension_install,

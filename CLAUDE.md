@@ -29,8 +29,11 @@ Rust talks to it over JSON lines (`src-tauri/src/manga/`); UI: Browse → Manga,
 `/manga-reader/[id]`. Verified live (Keiyoushi "Aqua Manga"): install of the prebuilt JAR, popular,
 details, chapters, pages, images (`cargo run --example manga_chain -- <repo> "<name>"` runs the whole
 chain live). JARs are preferred over APKs; extension `memo` is stored (`memo` columns, schema v3) and passed back.
-Next, in order:
-1. User tests manga in the real app (manga added before schema v3 need one chapter-list refresh).
-2. Packaging (user chose option 1): download Eclipse Temurin JDK 25 (approved) to `jlink` a trimmed
-   runtime with an AppCDS archive; add an "Enable manga" download in More; release v0.2.0.
+Engine packaging is done and tested in the app: `scripts/build-manga-engine.ps1 -Version N` builds
+`dist/kizuna-manga-engine-N.zip` (jlink'd Temurin 25 runtime + host jar, ~123 MB) and prints the
+version/size/SHA-256 to paste into `src-tauri/src/manga/engine.rs`; More → Manga downloads, verifies
+and installs it into `<app data>/manga-engine/`. The host builds its own class cache (`manga/host.jsa`)
+on exit. `KIZUNA_ENGINE_URL` overrides the download URL for local testing.
+Next: release v0.2.0 (ask first). The app downloads the engine from the v0.2.0 release, so
+`kizuna-manga-engine-1.zip` must be attached to that exact release.
 Later: JS manga plugins, "verify in browser" for Cloudflare sites, phone backup import.

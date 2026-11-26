@@ -28,11 +28,25 @@ export interface InstalledExtension {
   sources: InstalledSource[];
 }
 export interface CachedSource { name: string; lang: string; pkgName: string; supportsLatest: boolean; baseUrl: string | null }
-export interface MangaEngineStatus { installed: boolean; running: boolean; java: string; jar: string }
+export interface MangaEngineStatus {
+  installed: boolean;
+  running: boolean;
+  java: string;
+  jar: string;
+  /** Installed download's version; null when not installed or on dev overrides. */
+  version: number | null;
+  /** Version this app ships with. */
+  latest: number;
+  downloadSize: number;
+  /** Running from KIZUNA_JAVA / KIZUNA_EXT_HOST_JAR. */
+  dev: boolean;
+}
 export interface MangaPageRef { index: number; image: string | null; pageUrl: string }
 
 export const mangaApi = {
   status: () => invoke<MangaEngineStatus>("manga_engine_status"),
+  engineInstall: () => invoke<MangaEngineStatus>("manga_engine_install"),
+  engineRemove: () => invoke<MangaEngineStatus>("manga_engine_remove"),
   repoList: (repos: string[]) => invoke<{ extensions: RepoExtension[]; errors: string[] }>("manga_repo_list", { repos }),
   extensions: () => invoke<InstalledExtension[]>("manga_extensions"),
   install: (entry: RepoExtension) => invoke<InstalledExtension>("manga_extension_install", { entry }),
