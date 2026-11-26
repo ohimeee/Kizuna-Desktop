@@ -37,5 +37,5 @@ and installs it into `<app data>/manga-engine/`. The host builds its own class c
 on exit. `KIZUNA_ENGINE_URL` overrides the download URL for local testing.
 Released in v0.2.0. `kizuna-manga-engine-1.zip` must stay attached to the v0.2.0 release (the app
 downloads it from there); a new engine needs a new ENGINE_VERSION and its zip on that app release.
-Next (not started): JS manga plugins, "verify in browser" for Cloudflare sites, phone backup import
-and sync (planned in `docs/phone-backup-and-sync-plan.md`; transport still undecided).
+Next (not started): JS manga plugins, "verify in browser" for Cloudflare sites, phone sync
+(backup import is done; sync planned in `docs/phone-backup-and-sync-plan.md`, transport undecided).

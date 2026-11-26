@@ -1,6 +1,7 @@
 # Plan: phone backup import and sync
 
-Status: **planned, not started** (2026-11-26). Nothing below is built yet.
+Status: **step 1 (one-time import) done** (2026-11-26, `src-tauri/src/backup.rs`, More → Library).
+Steps 2-3 (sync) are planned, not started.
 
 Goal: bring the Android app's library (novels and manga) into Kizuna Desktop, first as a one-time
 import, then as ongoing sync.
