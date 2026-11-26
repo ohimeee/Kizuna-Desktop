@@ -10,6 +10,7 @@
   import { formatDate } from "$lib/format";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { untrack } from "svelte";
+  import { downloads } from "$lib/downloads.svelte";
 
   const id = $derived(Number(page.params.id));
 
@@ -27,6 +28,43 @@
   let categories = $state<Category[]>([]);
   let catDialog = $state(false);
   let catChoice = $state<Set<number>>(new Set());
+  let showDlMenu = $state(false);
+
+  /** Chapters with an offline copy; kept current by download events. */
+  let downloaded = $state<Set<number>>(new Set());
+  $effect(() => {
+    downloaded = new Set(view?.downloaded ?? []);
+  });
+  $effect(() => {
+    const d = downloads.lastDone;
+    if (d && view && d.novelId === view.novel.id) untrack(() => (downloaded = new Set(downloaded).add(d.chapterId)));
+  });
+
+  async function download(ids: number[]) {
+    const todo = ids.filter((i) => !downloaded.has(i));
+    if (!todo.length) return toast("Already downloaded");
+    await api.downloadsEnqueue(todo);
+    selected = new Set();
+    showDlMenu = false;
+    toast(`Downloading ${todo.length} chapter${todo.length === 1 ? "" : "s"}`);
+  }
+
+  async function deleteDownloads(ids: number[]) {
+    if (!view) return;
+    const have = ids.filter((i) => downloaded.has(i));
+    await api.downloadsDelete(view.novel.id, have);
+    const next = new Set(downloaded);
+    for (const i of have) next.delete(i);
+    downloaded = next;
+    selected = new Set();
+  }
+
+  function downloadNext(n: number | "unread" | "all") {
+    if (!view) return;
+    const list = n === "all" ? view.chapters : view.chapters.filter((c) => !c.read);
+    const pick = typeof n === "number" ? list.filter((c) => !downloaded.has(c.id)).slice(0, n) : list;
+    download(pick.map((c) => c.id));
+  }
 
   $effect(() => {
     const novelId = id;
@@ -149,12 +187,33 @@
     <button class="icon-btn" title="Back" onclick={() => history.back()}><Icon name="arrow_back" /></button>
     {#if selected.size}
       <h1>{selected.size} selected</h1>
+      <button class="icon-btn" title="Download" onclick={() => download([...selected])}><Icon name="download" /></button>
+      {#if selectedList.some((c) => downloaded.has(c.id))}
+        <button class="icon-btn" title="Delete downloads" onclick={() => deleteDownloads([...selected])}><Icon name="delete" /></button>
+      {/if}
       <button class="icon-btn" title="Bookmark" onclick={() => setBookmark([...selected], !selectedList.every((c) => c.bookmark))}><Icon name="bookmark" /></button>
       <button class="icon-btn" title="Mark as read" onclick={() => setRead([...selected], true)}><Icon name="done_all" /></button>
       <button class="icon-btn" title="Mark as unread" onclick={() => setRead([...selected], false)}><Icon name="remove_done" /></button>
       <button class="icon-btn" title="Clear selection" onclick={() => (selected = new Set())}><Icon name="close" /></button>
     {:else}
       <span style="flex: 1"></span>
+      {#if view}
+        <div class="menu-wrap">
+          <button class="icon-btn" title="Download" onclick={() => (showDlMenu = !showDlMenu)}><Icon name="download" /></button>
+          {#if showDlMenu}
+            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+            <div class="menu-scrim" onclick={() => (showDlMenu = false)}></div>
+            <div class="menu">
+              <button onclick={() => downloadNext(1)}>Next chapter</button>
+              <button onclick={() => downloadNext(5)}>Next 5 chapters</button>
+              <button onclick={() => downloadNext(10)}>Next 10 chapters</button>
+              <button onclick={() => downloadNext(25)}>Next 25 chapters</button>
+              <button onclick={() => downloadNext("unread")}>Unread</button>
+              <button onclick={() => downloadNext("all")}>All</button>
+            </div>
+          {/if}
+        </div>
+      {/if}
       <button class="icon-btn" title="Refresh" disabled={refreshing || !view} onclick={refresh}><Icon name="refresh" class={refreshing ? "spin" : ""} /></button>
       {#if view}
         <button class="icon-btn" title="Open in browser" onclick={() => view && openUrl(view.novel.url)}><Icon name="open_in_new" /></button>
@@ -233,6 +292,7 @@
           {/if}
           <ul>
             {#each shown as c (c.id)}
+              {@const dl = downloads.status[c.id]}
               <li class:read={c.read} class:sel={selected.has(c.id)}>
                 <a class="row" href="/reader/{c.id}" onclick={(e) => onRowClick(e, c)}>
                   <div class="text">
@@ -247,10 +307,22 @@
                     </div>
                   </div>
                 </a>
+                {#if downloaded.has(c.id)}
+                  <button class="icon-btn dl done" title="Downloaded (click to delete)" onclick={() => deleteDownloads([c.id])}><Icon name="check_circle" fill size={20} /></button>
+                {:else if dl === "downloading"}
+                  <span class="icon-btn dl"><span class="mini-spin"></span></span>
+                {:else if dl === "queued"}
+                  <button class="icon-btn dl" title="Queued (click to cancel)" onclick={() => api.downloadsCancel([c.id])}><Icon name="schedule" size={20} /></button>
+                {:else if dl === "failed"}
+                  <button class="icon-btn dl failed" title={`Failed: ${downloads.errors[c.id] ?? ""} (click to retry)`} onclick={() => download([c.id])}><Icon name="error" size={20} /></button>
+                {/if}
                 <div class="row-actions">
                   <button class="icon-btn" title={c.bookmark ? "Remove bookmark" : "Bookmark"} onclick={() => setBookmark([c.id], !c.bookmark)}><Icon name="bookmark" fill={c.bookmark} size={20} /></button>
                   <button class="icon-btn" title={c.read ? "Mark as unread" : "Mark as read"} onclick={() => setRead([c.id], !c.read)}><Icon name={c.read ? "remove_done" : "done_all"} size={20} /></button>
                   <button class="icon-btn" title="Mark previous as read" onclick={() => markPreviousRead(c)}><Icon name="vertical_align_top" size={20} /></button>
+                  {#if !downloaded.has(c.id) && !dl}
+                    <button class="icon-btn" title="Download" onclick={() => download([c.id])}><Icon name="download" size={20} /></button>
+                  {/if}
                 </div>
               </li>
             {/each}
@@ -404,4 +476,37 @@
   .hint { margin: 0; padding: 6px 20px; }
   .cat { display: flex; align-items: center; gap: 12px; padding: 8px 0; color: var(--on-surface); }
   :global(.spin) { animation: spin 0.9s linear infinite; }
+  .dl { flex: none; }
+  .dl.done { color: var(--tertiary); }
+  .dl.failed { color: var(--error); }
+  .mini-spin {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--secondary-container);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  .menu-wrap { position: relative; }
+  .menu-scrim { position: fixed; inset: 0; z-index: 30; }
+  .menu {
+    position: absolute;
+    right: 0;
+    top: 44px;
+    z-index: 31;
+    min-width: 200px;
+    padding: 8px 0;
+    border-radius: var(--radius-s);
+    background: var(--surface-container);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
+  }
+  .menu button {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+  }
+  .menu button:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
 </style>

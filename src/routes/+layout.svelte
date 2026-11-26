@@ -4,6 +4,7 @@
   import NavRail from "$lib/components/NavRail.svelte";
   import Toasts from "$lib/components/Toasts.svelte";
   import { settings } from "$lib/settings.svelte";
+  import { downloads } from "$lib/downloads.svelte";
   import { applyTheme } from "$lib/theme/apply";
   import { onMount } from "svelte";
 
@@ -11,6 +12,7 @@
 
   onMount(() => {
     settings.load();
+    downloads.start();
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => applyTheme(settings.values.appTheme, settings.values.themeMode, settings.values.pureBlack);
     mq.addEventListener("change", onChange);

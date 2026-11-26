@@ -45,14 +45,14 @@ impl HttpClient {
     pub fn get(&self, url: &str, headers_json: &str) -> Result<String> {
         let headers = parse_headers(headers_json)?;
         self.execute(|| self.client.get(url).headers(headers.clone()))
-            .with_context(|| format!("GET {url}"))
+
     }
 
     pub fn post(&self, url: &str, body: &str, headers_json: &str) -> Result<String> {
         let headers = parse_headers(headers_json)?;
         let body = body.to_string();
         self.execute(|| self.client.post(url).headers(headers.clone()).body(body.clone()))
-            .with_context(|| format!("POST {url}"))
+
     }
 
     /// Value of cookie `name` that would be sent to `url`, or "" (matches Android's contract).
@@ -70,7 +70,7 @@ impl HttpClient {
     fn execute(&self, build: impl Fn() -> RequestBuilder) -> Result<String> {
         let mut retries = 0;
         loop {
-            let response = build().send()?;
+            let response = build().send().map_err(friendly_error)?;
             let status = response.status().as_u16();
             let retry_after = response
                 .headers()
@@ -90,6 +90,40 @@ impl HttpClient {
             std::thread::sleep(Duration::from_secs(secs));
         }
     }
+}
+
+/// Turns reqwest's nested transport errors into one readable line, e.g.
+/// "Couldn't reach azurechronicles.com: connection timed out".
+fn friendly_error(e: reqwest::Error) -> anyhow::Error {
+    let host = e
+        .url()
+        .and_then(|u| u.host_str())
+        .unwrap_or("the site")
+        .trim_start_matches("www.")
+        .to_string();
+    let why = if e.is_timeout() {
+        "connection timed out"
+    } else if e.is_connect() {
+        let chain = format!("{e:#}").to_lowercase();
+        if chain.contains("dns") || chain.contains("resolve") || chain.contains("no such host") {
+            "couldn't look up the address (offline?)"
+        } else if chain.contains("timed out") {
+            "connection timed out"
+        } else if chain.contains("refused") {
+            "connection refused"
+        } else if chain.contains("certificate") || chain.contains("tls") {
+            "secure connection failed"
+        } else {
+            "couldn't connect"
+        }
+    } else if e.is_redirect() {
+        "too many redirects"
+    } else if e.is_body() || e.is_decode() {
+        "the response was cut off"
+    } else {
+        return anyhow::Error::new(e);
+    };
+    anyhow::anyhow!("Couldn't reach {host}: {why}")
 }
 
 fn parse_headers(headers_json: &str) -> Result<HeaderMap> {

@@ -15,7 +15,7 @@
 </script>
 
 <nav class="rail">
-  <div class="logo" title="Kizuna">絆</div>
+  <img class="logo" src="/logo.png" alt="Kizuna" title="Kizuna" />
   {#each items as item}
     {@const on = active(item.href)}
     <a href={item.href} class="item" class:on aria-current={on ? "page" : undefined}>
@@ -37,16 +37,9 @@
     background: var(--surface-container);
   }
   .logo {
-    display: grid;
-    place-items: center;
     width: 48px;
     height: 48px;
     margin-bottom: 20px;
-    border-radius: var(--radius-l);
-    background: var(--primary-container);
-    color: var(--on-primary-container);
-    font-size: 24px;
-    font-weight: 700;
   }
   .item {
     display: flex;

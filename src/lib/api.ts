@@ -67,7 +67,22 @@ export interface Chapter {
   dateFetch: number;
 }
 
-export interface NovelView { novel: Novel; chapters: Chapter[]; categoryIds: number[]; source: SourceInfo | null }
+export interface NovelView {
+  novel: Novel;
+  chapters: Chapter[];
+  categoryIds: number[];
+  source: SourceInfo | null;
+  downloaded: number[];
+}
+
+export interface QueueItem { chapterId: number; novelId: number; chapterName: string; novelTitle: string }
+export interface DownloadState { active: QueueItem | null; queue: QueueItem[]; paused: boolean }
+export type DownloadProgress =
+  | { state: "queued"; chapterId: number }
+  | { state: "downloading"; chapterId: number }
+  | { state: "done"; chapterId: number; novelId: number }
+  | { state: "failed"; chapterId: number; error: string }
+  | { state: "removed"; chapterId: number };
 
 export interface LibraryItem extends Novel { unread: number; total: number; lastRead: number; categoryIds: number[] }
 export interface Category { id: number; name: string; sort: number }
@@ -111,11 +126,26 @@ export const api = {
   historyClear: () => invoke<void>("history_clear"),
   updatesList: () => invoke<UpdateItem[]>("updates_list"),
 
+  downloadsEnqueue: (chapterIds: number[]) => invoke<void>("downloads_enqueue", { chapterIds }),
+  downloadsCancel: (chapterIds: number[]) => invoke<void>("downloads_cancel", { chapterIds }),
+  downloadsClear: () => invoke<void>("downloads_clear"),
+  downloadsSetPaused: (paused: boolean) => invoke<void>("downloads_set_paused", { paused }),
+  downloadsState: () => invoke<DownloadState>("downloads_state"),
+  downloadsDelete: (novelId: number, chapterIds: number[]) => invoke<void>("downloads_delete", { novelId, chapterIds }),
+  downloadsDeleteNovel: (novelId: number) => invoke<void>("downloads_delete_novel", { novelId }),
+  downloadsSize: () => invoke<number>("downloads_size"),
+
   settingsGet: () => invoke<Record<string, unknown>>("settings_get"),
   settingsSet: (key: string, value: unknown) => invoke<void>("settings_set", { key, value }),
 };
 
 /** Error text from a failed command (commands reject with a plain string). */
 export function errorText(e: unknown): string {
-  return typeof e === "string" ? e : e instanceof Error ? e.message : JSON.stringify(e);
+  const raw = typeof e === "string" ? e : e instanceof Error ? e.message : JSON.stringify(e);
+  // "popularNovels() failed: Error: Couldn't reach x: timed out\n    at popularNovels (x.js:1:2)"
+  // → "Couldn't reach x: timed out". Plugin script errors keep their text.
+  return raw
+    .replace(/^\w+\(\) failed: (?:Error: )?/, "")
+    .replace(/\s+at [\s\S]*$/, "")
+    .trim();
 }

@@ -4,6 +4,7 @@
   import { settings, type ThemeMode } from "$lib/settings.svelte";
   import { THEMES } from "$lib/theme/themes";
   import { isDark } from "$lib/theme/apply";
+  import { downloads } from "$lib/downloads.svelte";
   import { onMount } from "svelte";
 
   let version = $state("");
@@ -57,6 +58,10 @@
       <section>
         <h2 class="label-large">Library</h2>
         <a class="row link" href="/more/categories"><Icon name="label" /><span>Edit categories</span></a>
+        <a class="row link" href="/more/downloads">
+          <Icon name="download" /><span>Download queue</span>
+          {#if downloads.count}<span class="badge">{downloads.count}</span>{/if}
+        </a>
       </section>
 
       <section>

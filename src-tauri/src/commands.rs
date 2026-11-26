@@ -7,11 +7,13 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::db::{self, Category, Chapter, Db, HistoryItem, LibraryItem, Novel, UpdateItem};
+use crate::downloads::{Downloads, QueueItem};
 use crate::plugins::{self, IndexEntry, NovelPage, PluginStore, SourceInfo};
 
 pub struct AppState {
     pub db: Db,
     pub plugins: PluginStore,
+    pub downloads: Downloads,
 }
 
 pub type Shared<'a> = State<'a, Arc<AppState>>;
@@ -132,6 +134,8 @@ pub struct NovelView {
     chapters: Vec<Chapter>,
     category_ids: Vec<i64>,
     source: Option<SourceInfo>,
+    /// Chapter ids with an offline copy.
+    downloaded: Vec<i64>,
 }
 
 fn novel_view(s: &AppState, id: i64) -> anyhow::Result<NovelView> {
@@ -141,7 +145,13 @@ fn novel_view(s: &AppState, id: i64) -> anyhow::Result<NovelView> {
         .path_for(&novel.source_id)
         .ok()
         .and_then(|p| plugins::load_info(&p).ok());
-    Ok(NovelView { chapters: s.db.chapters(id)?, category_ids: s.db.novel_categories(id)?, novel, source })
+    Ok(NovelView {
+        chapters: s.db.chapters(id)?,
+        category_ids: s.db.novel_categories(id)?,
+        downloaded: s.downloads.downloaded(id),
+        novel,
+        source,
+    })
 }
 
 #[tauri::command]
@@ -196,6 +206,9 @@ pub async fn chapter_get(state: Shared<'_>, id: i64) -> CmdResult<Chapter> {
 pub async fn chapter_content(state: Shared<'_>, chapter_id: i64) -> CmdResult<String> {
     blocking(&state, move |s| {
         let chapter = s.db.chapter(chapter_id)?;
+        if let Some(saved) = s.downloads.read(chapter.novel_id, chapter.id) {
+            return Ok(saved);
+        }
         let novel = s.db.novel(chapter.novel_id)?;
         let path = s.plugins.path_for(&novel.source_id)?;
         plugins::content(&path, &chapter.url)
@@ -306,6 +319,90 @@ pub async fn library_update(state: Shared<'_>) -> CmdResult<LibraryUpdateResult>
         Ok(res)
     })
     .await
+}
+
+// ---- downloads ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadState {
+    active: Option<QueueItem>,
+    queue: Vec<QueueItem>,
+    paused: bool,
+}
+
+#[tauri::command]
+pub async fn downloads_enqueue(state: Shared<'_>, app: tauri::AppHandle, chapter_ids: Vec<i64>) -> CmdResult<()> {
+    blocking(&state, move |s| {
+        let mut items = Vec::with_capacity(chapter_ids.len());
+        let mut titles = std::collections::HashMap::new();
+        for id in chapter_ids {
+            let c = s.db.chapter(id)?;
+            let title = match titles.get(&c.novel_id) {
+                Some(t) => t,
+                None => {
+                    let t = s.db.novel(c.novel_id)?.title;
+                    titles.entry(c.novel_id).or_insert(t)
+                }
+            }
+            .clone();
+            items.push(QueueItem { chapter_id: c.id, novel_id: c.novel_id, chapter_name: c.name, novel_title: title });
+        }
+        s.downloads.enqueue(items, &app);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn downloads_cancel(state: Shared<'_>, app: tauri::AppHandle, chapter_ids: Vec<i64>) -> CmdResult<()> {
+    blocking(&state, move |s| {
+        s.downloads.cancel(&chapter_ids, &app);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn downloads_clear(state: Shared<'_>, app: tauri::AppHandle) -> CmdResult<()> {
+    blocking(&state, move |s| {
+        s.downloads.clear(&app);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn downloads_set_paused(state: Shared<'_>, paused: bool) -> CmdResult<()> {
+    blocking(&state, move |s| {
+        s.downloads.set_paused(paused);
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn downloads_state(state: Shared<'_>) -> CmdResult<DownloadState> {
+    blocking(&state, |s| {
+        let (active, queue, paused) = s.downloads.snapshot();
+        Ok(DownloadState { active, queue, paused })
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn downloads_delete(state: Shared<'_>, novel_id: i64, chapter_ids: Vec<i64>) -> CmdResult<()> {
+    blocking(&state, move |s| s.downloads.delete(novel_id, &chapter_ids)).await
+}
+
+#[tauri::command]
+pub async fn downloads_delete_novel(state: Shared<'_>, novel_id: i64) -> CmdResult<()> {
+    blocking(&state, move |s| s.downloads.delete_novel(novel_id)).await
+}
+
+#[tauri::command]
+pub async fn downloads_size(state: Shared<'_>) -> CmdResult<u64> {
+    blocking(&state, |s| Ok(s.downloads.size())).await
 }
 
 // ---- settings ----------------------------------------------------------------------------
