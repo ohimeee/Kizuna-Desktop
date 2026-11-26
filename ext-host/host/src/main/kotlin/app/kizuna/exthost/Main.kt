@@ -91,7 +91,9 @@ fun main(args: Array<String>) {
                     val params = req["params"] as? JsonObject ?: JsonObject(emptyMap())
                     buildJsonObject { put("id", id); put("result", handle(registry, method, params)) }
                 } catch (e: Throwable) {
-                    buildJsonObject { put("id", id); put("error", e.message ?: e.toString()) }
+                    System.err.println("request failed: $line")
+                    e.printStackTrace()
+                    buildJsonObject { put("id", id); put("error", describe(e)) }
                 }
                 send(reply)
             }
@@ -99,6 +101,21 @@ fun main(args: Array<String>) {
         jobs.forEach { it.join() } // let in-flight requests answer before exiting
     }
     kotlin.system.exitProcess(0)
+}
+
+/** One readable line: exception type (unless it's a plain error) and message, root cause last. */
+private fun describe(e: Throwable): String {
+    val root = generateSequence(e) { it.cause }.last()
+    fun one(t: Throwable): String {
+        val name = t.javaClass.simpleName
+        val msg = t.message
+        return when {
+            msg.isNullOrBlank() -> name
+            t is IllegalStateException || t is IllegalArgumentException -> msg
+            else -> "$name: $msg"
+        }
+    }
+    return if (root === e) one(e) else "${one(e)} (caused by ${one(root)})"
 }
 
 /** Same order as Suwayomi's applicationSetup(): Android main loop, Koin, AndroidCompat. */
@@ -129,6 +146,8 @@ data class MangaDto(
     val genre: List<String> = emptyList(),
     val status: Int = 0,
     val initialized: Boolean = false,
+    /** Extension-private data (extension-lib 1.6); must be handed back on later calls. */
+    val memo: JsonObject = JsonObject(emptyMap()),
 )
 
 @Serializable
@@ -141,6 +160,7 @@ data class ChapterDto(
     val dateUpload: Long,
     val chapterNumber: Float,
     val scanlator: String? = null,
+    val memo: JsonObject = JsonObject(emptyMap()),
 )
 
 @Serializable
@@ -159,15 +179,19 @@ private fun SManga.toDto() = MangaDto(
     genre = genre?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty(),
     status = status,
     initialized = initialized,
+    memo = memo,
 )
 
 private fun MangasPage.toDto() = MangaPageDto(mangas.map { it.toDto() }, hasNextPage)
 
-private fun SChapter.toDto() = ChapterDto(url, name, date_upload, chapter_number, scanlator)
+private fun SChapter.toDto() = ChapterDto(url, name, date_upload, chapter_number, scanlator, memo)
+
+private fun JsonObject.memo(key: String = "memo"): JsonObject = (this[key] as? JsonObject) ?: JsonObject(emptyMap())
 
 private fun mangaOf(params: JsonObject) = SManga.create().apply {
     url = params.str("url")
     title = params["title"]?.jsonPrimitive?.content ?: ""
+    memo = params.memo()
 }
 
 private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.content ?: error("missing \"$key\"")
@@ -200,7 +224,7 @@ private suspend fun handle(reg: ExtensionRegistry, method: String, p: JsonObject
         }
         "pages" -> {
             val source = reg.sources.of(p)
-            val chapter = SChapter.create().apply { url = p.str("url"); name = "" }
+            val chapter = SChapter.create().apply { url = p.str("url"); name = ""; memo = p.memo() }
             val pages = source.getPageList(chapter).map { page ->
                 PageDto(page.index, page.url, page.imageUrl)
             }

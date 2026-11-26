@@ -89,26 +89,30 @@ class ExtensionRegistry(private val root: File) {
         return errors
     }
 
-    /** Installs (or updates) an extension from an APK file. The APK is not kept. */
+    /**
+     * Installs (or updates) an extension from an APK or a prebuilt JAR. v2 repos (Keiyoushi)
+     * publish JARs next to the APKs: compiled Java classes plus the manifest, so no dex2jar step.
+     * Their minified code also doesn't survive dex2jar, so prefer the JAR when there is one.
+     * The input file is not kept.
+     */
     fun install(apk: File): ExtensionInfo {
-        val info = packageInfo(apk)
-        val pkg = info.packageName
-        val features = info.reqFeatures.orEmpty().map { it.name }
-        require(EXTENSION_FEATURE in features) { "This file is not a Tachiyomi/Mihon extension" }
-        val libVersion = info.versionName.substringBeforeLast('.').toDouble()
+        val isJar = apk.extension.equals("jar", ignoreCase = true)
+        val m = if (isJar) jarManifest(apk) else apkManifest(apk)
+        val pkg = m.pkgName
+        require(EXTENSION_FEATURE in m.features) { "This file is not a Tachiyomi/Mihon extension" }
+        val libVersion = m.versionName.substringBeforeLast('.').toDouble()
         require(libVersion in LIB_VERSION_MIN..LIB_VERSION_MAX) {
             "Extension lib $libVersion is not supported (only $LIB_VERSION_MIN to $LIB_VERSION_MAX)"
         }
-        val meta = info.applicationInfo.metaData
-        val sourceClass = meta.getString(METADATA_SOURCE_CLASS)!!.trim()
-        val nsfw = (meta.getString(METADATA_CONTENT_WARNING) ?: meta.getString(METADATA_NSFW))?.toIntOrNull() == 1
+        val sourceClass = requireNotNull(m.metaData[METADATA_SOURCE_CLASS]) { "No extension class in the manifest" }.trim()
+        val nsfw = (m.metaData[METADATA_CONTENT_WARNING] ?: m.metaData[METADATA_NSFW])?.toIntOrNull() == 1
         val stored = StoredMeta(
             pkgName = pkg,
-            label = info.applicationInfo.nonLocalizedLabel?.toString() ?: pkg,
-            versionName = info.versionName,
-            versionCode = info.versionCode,
+            label = m.label ?: pkg,
+            versionName = m.versionName,
+            versionCode = m.versionCode,
             nsfw = nsfw,
-            signatureHash = signatureHash(info),
+            signatureHash = m.signatureHash,
             classNames = sourceClass.split(";").map { it.trim() }.filter { it.isNotEmpty() }
                 .map { if (it.startsWith(".")) pkg + it else it },
         )
@@ -117,8 +121,12 @@ class ExtensionRegistry(private val root: File) {
         val jar = File(root, "$pkg.jar")
         val tmp = File(root, "$pkg.jar.part")
         tmp.delete()
-        dex2jar(apk, tmp)
-        copyAssets(apk, tmp)
+        if (isJar) {
+            apk.copyTo(tmp, overwrite = true) // as-is, like Suwayomi's Jar package path
+        } else {
+            dex2jar(apk, tmp)
+            copyAssets(apk, tmp)
+        }
         jar.delete()
         check(tmp.renameTo(jar)) { "Couldn't write $jar" }
         val ext = load(jar, stored)
@@ -186,6 +194,53 @@ class ExtensionRegistry(private val root: File) {
 }
 
 // ---- APK helpers (from Suwayomi's PackageTools / Extension) ------------------------------
+
+/** What install needs from an extension's AndroidManifest, from either package format. */
+private class Manifest(
+    val pkgName: String,
+    val versionName: String,
+    val versionCode: Int,
+    val features: List<String>,
+    val label: String?,
+    val metaData: Map<String, String?>,
+    val signatureHash: String?,
+)
+
+private fun apkManifest(apk: File): Manifest {
+    val info = packageInfo(apk)
+    val meta = info.applicationInfo.metaData
+    return Manifest(
+        pkgName = info.packageName,
+        versionName = info.versionName,
+        versionCode = info.versionCode,
+        features = info.reqFeatures.orEmpty().map { it.name },
+        label = info.applicationInfo.nonLocalizedLabel?.toString(),
+        metaData = meta.keySet().associateWith { meta.getString(it) },
+        signatureHash = signatureHash(info),
+    )
+}
+
+/** Prebuilt JARs from v2 repos carry a plain-text AndroidManifest.xml (APKs use binary XML). */
+private fun jarManifest(jar: File): Manifest {
+    val xml = java.util.zip.ZipFile(jar).use { zip ->
+        val entry = zip.getEntry("AndroidManifest.xml") ?: error("No AndroidManifest.xml in ${jar.name}")
+        zip.getInputStream(entry).readBytes()
+    }
+    val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(xml.inputStream())
+    val root = doc.documentElement
+    fun Element.android(name: String): String? = getAttribute("android:$name").ifEmpty { null }
+    fun elements(tag: String) = doc.getElementsByTagName(tag).toList().map { it as Element }
+    val app = elements("application").firstOrNull()
+    return Manifest(
+        pkgName = root.getAttribute("package").ifEmpty { error("No package name in the manifest") },
+        versionName = root.android("versionName") ?: error("No versionName in the manifest"),
+        versionCode = root.android("versionCode")?.toIntOrNull() ?: 0,
+        features = elements("uses-feature").mapNotNull { it.android("name") },
+        label = app?.android("label"),
+        metaData = elements("meta-data").mapNotNull { e -> e.android("name")?.let { it to e.android("value") } }.toMap(),
+        signatureHash = null,
+    )
+}
 
 private fun packageInfo(apk: File): PackageInfo =
     ApkParsers.getMetaInfo(apk).toPackageInfo(apk).apply {

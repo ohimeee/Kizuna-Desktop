@@ -128,6 +128,12 @@ impl ExtHost {
         let mut cmd = Command::new(&paths.java);
         cmd.arg("-Xss8m")
             .arg("-XX:+UseSerialGC")
+            // dex2jar output doesn't always pass the JVM's strict bytecode verifier ("Bad type
+            // on operand stack" when it can't resolve a type while computing frames), though it
+            // runs fine. Extensions are fully trusted code either way (as on Android), so the
+            // verifier isn't a security boundary here. (A diagnostic option since JDK 25.)
+            .arg("-XX:+UnlockDiagnosticVMOptions")
+            .arg("-XX:-BytecodeVerificationRemote")
             .arg("-Xmx768m")
             .arg("--enable-native-access=ALL-UNNAMED")
             .arg("-Dfile.encoding=UTF-8")

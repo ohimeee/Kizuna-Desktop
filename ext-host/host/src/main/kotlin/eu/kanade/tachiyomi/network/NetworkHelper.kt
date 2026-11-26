@@ -89,8 +89,10 @@ class NetworkHelper(
             builder.addNetworkInterceptor(httpLoggingInterceptor)
             // }
 
-            // Kizuna: Suwayomi's CloudflareInterceptor (FlareSolverr-based bypass) is deliberately
-            // not included. Cloudflare-protected sources fail instead.
+            // Kizuna: Suwayomi's FlareSolverr-based CloudflareInterceptor is deliberately not
+            // included. Extensions require an interceptor of this name to be present, so a
+            // pass-through stand-in is added; Cloudflare-protected sources still fail.
+            builder.addInterceptor(eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor())
 
             // when (preferences.dohProvider().get()) {
             //     PREF_DOH_CLOUDFLARE -> builder.dohCloudflare()

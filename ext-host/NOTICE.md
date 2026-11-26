@@ -8,7 +8,7 @@ headers where present:
 
 - `AndroidCompat/` (Android API compatibility layer, including `AndroidCompat/Config`)
 - `host/src/main/kotlin/eu/kanade/tachiyomi/` (Tachiyomi source API and networking; Suwayomi's
-  `CloudflareInterceptor`, `source/local` and storage utilities are not included, and `AppInfo`
+  FlareSolverr-based `CloudflareInterceptor` is replaced by a pass-through stand-in, `source/local` and storage utilities are not included, and `AppInfo`
   and `NetworkHelper` are modified)
 - `host/src/main/kotlin/suwayomi/tachidesk/manga/impl/util/` (`BytecodeEditor`,
   `ChildFirstURLClassLoader`, and small language helpers)
