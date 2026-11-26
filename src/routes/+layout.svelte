@@ -6,6 +6,9 @@
   import { settings } from "$lib/settings.svelte";
   import { downloads } from "$lib/downloads.svelte";
   import UpdateDialog from "$lib/components/UpdateDialog.svelte";
+  import Onboarding from "$lib/components/Onboarding.svelte";
+  import BackupImportDialog from "$lib/components/BackupImportDialog.svelte";
+  import { onboarding } from "$lib/onboarding.svelte";
   import { updater } from "$lib/updater.svelte";
   import { applyTheme } from "$lib/theme/apply";
   import { onMount, tick } from "svelte";
@@ -19,6 +22,7 @@
     getCurrentWindow().show().catch(() => {});
     const shownAt = performance.now();
     settings.load().then(async () => {
+      onboarding.checkFirstRun();
       await tick();
       // Startup is quicker than a blink, so hold the splash long enough to be seen (asked
       // 2026-11-26: ~0.8 s). The app keeps loading underneath; nothing waits on this.
@@ -53,6 +57,8 @@
     <main>{@render children()}</main>
   </div>
 {/if}
+{#if settings.loaded && onboarding.open}<Onboarding />{/if}
+<BackupImportDialog />
 <Toasts />
 <UpdateDialog />
 

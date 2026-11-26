@@ -18,6 +18,10 @@ export const defaults = {
   librarySortDesc: false,
   libraryUnreadOnly: false,
   showUnreadBadge: true,
+  /** Mint badge with the number of downloaded chapters. */
+  showDownloadBadge: true,
+  /** The first-run onboarding was finished or skipped. */
+  onboarded: false,
   libraryKind: "all" as "all" | "novel" | "manga",
 
   // Manga

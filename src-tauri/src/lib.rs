@@ -16,6 +16,7 @@ use commands::AppState;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         // Remember size/position/maximized, but not the reader's fullscreen mode.
@@ -32,7 +33,18 @@ pub fn run() {
             std::fs::create_dir_all(&data_dir)?;
             let db = db::Db::open(&data_dir.join("kizuna.db"))?;
             let plugins = plugins::PluginStore::new(data_dir.join("sources"))?;
-            let downloads = downloads::Downloads::new(data_dir.join("downloads"))?;
+            // The download folder the user picked (More -> Library), else the default.
+            let default_downloads = data_dir.join("downloads");
+            let chosen = db
+                .settings()?
+                .get(commands::DOWNLOAD_DIR_SETTING)
+                .and_then(|v| v.as_str())
+                .filter(|p| !p.is_empty())
+                .map(std::path::PathBuf::from);
+            let downloads = chosen
+                .and_then(|p| downloads::Downloads::new(p).ok())
+                .map(Ok)
+                .unwrap_or_else(|| downloads::Downloads::new(default_downloads.clone()))?;
             // Downloads from before readable names: <novel id>/<chapter id> -> <title>/<chapter>.
             downloads.migrate_numeric(&db);
             let engine_dir = data_dir.join("manga-engine");
@@ -43,6 +55,7 @@ pub fn run() {
                 downloads,
                 manga,
                 manga_tmp: data_dir.join("manga-tmp"),
+                default_downloads,
                 image_cache: data_dir.join("image-cache"),
             }));
             downloads::Downloads::start(app.handle().clone());
@@ -103,6 +116,9 @@ pub fn run() {
             commands::settings_set,
             commands::now_ms,
             commands::backup_import,
+            commands::downloads_location,
+            commands::downloads_set_location,
+            commands::downloads_open_folder,
             commands::manga_engine_status,
             commands::manga_engine_install,
             commands::manga_engine_remove,

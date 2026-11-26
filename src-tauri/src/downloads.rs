@@ -60,7 +60,8 @@ struct Inner {
 }
 
 pub struct Downloads {
-    dir: PathBuf,
+    /// The downloads folder; the user can move it (More -> Library -> Download location).
+    dir: Mutex<PathBuf>,
     inner: Mutex<Inner>,
     wake: Condvar,
 }
@@ -97,11 +98,42 @@ fn is_plain_relative(rel: &str) -> bool {
 impl Downloads {
     pub fn new(dir: PathBuf) -> Result<Self> {
         std::fs::create_dir_all(&dir)?;
-        Ok(Self { dir, inner: Mutex::new(Inner::default()), wake: Condvar::new() })
+        Ok(Self { dir: Mutex::new(dir), inner: Mutex::new(Inner::default()), wake: Condvar::new() })
+    }
+
+    pub fn dir(&self) -> PathBuf {
+        self.dir.lock().unwrap().clone()
+    }
+
+    /// Moves the downloads folder (and everything in it) to `new`. Refused while anything is
+    /// downloading. Stored paths are relative, so nothing in the database changes.
+    pub fn move_to(&self, new: &Path) -> Result<()> {
+        {
+            let inner = self.inner.lock().unwrap();
+            anyhow::ensure!(inner.active.is_none() && inner.queue.is_empty(), "Wait for the download queue to finish first");
+        }
+        let old = self.dir();
+        std::fs::create_dir_all(new).with_context(|| format!("couldn't create {}", new.display()))?;
+        let (old_c, new_c) = (old.canonicalize()?, new.canonicalize()?);
+        if old_c == new_c {
+            return Ok(());
+        }
+        anyhow::ensure!(!new_c.starts_with(&old_c), "Pick a folder outside the current downloads folder");
+        for entry in std::fs::read_dir(&old)?.flatten() {
+            let dest = new.join(entry.file_name());
+            anyhow::ensure!(!dest.exists(), "{} already has a \"{}\"", new.display(), entry.file_name().to_string_lossy());
+            if std::fs::rename(entry.path(), &dest).is_err() {
+                // Another drive: copy, then remove the original.
+                copy_all(&entry.path(), &dest)?;
+                remove_any(&entry.path())?;
+            }
+        }
+        *self.dir.lock().unwrap() = new.to_path_buf();
+        Ok(())
     }
 
     fn abs(&self, rel: &str) -> Option<PathBuf> {
-        is_plain_relative(rel).then(|| self.dir.join(rel))
+        is_plain_relative(rel).then(|| self.dir().join(rel))
     }
 
     /// Where a chapter's download lives, if it has one on disk.
@@ -159,7 +191,7 @@ impl Downloads {
         for &id in chapter_ids {
             if let Some(p) = db.download_path(id)?.and_then(|rel| self.abs(&rel)) {
                 remove_any(&p)?;
-                if let Some(parent) = p.parent().filter(|d| *d != self.dir) {
+                if let Some(parent) = p.parent().filter(|d| *d != self.dir()) {
                     let _ = std::fs::remove_dir(parent); // only if now empty
                 }
             }
@@ -193,7 +225,7 @@ impl Downloads {
         let first = with_ext(&base);
         let taken = |rel: &str| -> Result<bool> {
             Ok(db.download_path_owner(rel)?.is_some_and(|owner| owner != chapter.id)
-                || (self.dir.join(rel).exists() && db.download_path(chapter.id)?.as_deref() != Some(rel)))
+                || (self.dir().join(rel).exists() && db.download_path(chapter.id)?.as_deref() != Some(rel)))
         };
         Ok(if taken(&first)? { with_ext(&format!("{base} ({})", chapter.id)) } else { first })
     }
@@ -201,7 +233,7 @@ impl Downloads {
     /// Moves downloads saved in the old `<novel id>/<chapter id>` layout to readable names.
     /// Runs at startup; anything it can't place is left where it is.
     pub fn migrate_numeric(&self, db: &Db) {
-        let Ok(novels) = std::fs::read_dir(&self.dir) else { return };
+        let Ok(novels) = std::fs::read_dir(self.dir()) else { return };
         for novel_dir in novels.flatten() {
             let name = novel_dir.file_name().to_string_lossy().into_owned();
             if !novel_dir.path().is_dir() || name.parse::<i64>().is_err() {
@@ -219,7 +251,7 @@ impl Downloads {
                 let (Ok(chapter), true) = (db.chapter(chapter_id), is_text || e.path().is_dir()) else { continue };
                 let Ok(novel) = db.novel(chapter.novel_id) else { continue };
                 let Ok(rel) = self.target(db, &novel, &chapter, is_text.then_some("txt")) else { continue };
-                let dest = self.dir.join(&rel);
+                let dest = self.dir().join(&rel);
                 let moved = dest.parent().map(std::fs::create_dir_all).transpose().is_ok() && std::fs::rename(e.path(), &dest).is_ok();
                 if moved {
                     let _ = db.set_download_path(chapter_id, Some(&rel));
@@ -244,7 +276,7 @@ impl Downloads {
                 })
                 .unwrap_or(0)
         }
-        walk(&self.dir)
+        walk(&self.dir())
     }
 
     pub fn enqueue(&self, db: &Db, items: Vec<QueueItem>, app: &AppHandle) {
@@ -323,6 +355,18 @@ impl Downloads {
     }
 }
 
+fn copy_all(from: &Path, to: &Path) -> Result<()> {
+    if from.is_dir() {
+        std::fs::create_dir_all(to)?;
+        for e in std::fs::read_dir(from)?.flatten() {
+            copy_all(&e.path(), &to.join(e.file_name()))?;
+        }
+    } else {
+        std::fs::copy(from, to).with_context(|| format!("copying {}", from.display()))?;
+    }
+    Ok(())
+}
+
 fn remove_any(p: &Path) -> Result<()> {
     if p.is_dir() {
         std::fs::remove_dir_all(p).with_context(|| format!("deleting {}", p.display()))?;
@@ -348,7 +392,7 @@ fn fetch_and_save(state: &AppState, item: &QueueItem, progress: &dyn Fn(usize, u
     let text = plugins::content(&path, &chapter.url)?;
     anyhow::ensure!(!text.trim().is_empty(), "the source returned an empty chapter");
     let rel = state.downloads.target(&state.db, &novel, &chapter, Some("txt"))?;
-    let out = state.downloads.dir.join(&rel);
+    let out = state.downloads.dir().join(&rel);
     std::fs::create_dir_all(out.parent().unwrap())?;
     // Write then rename, so a half-written file never counts as downloaded.
     let tmp = part_path(&out);
@@ -364,7 +408,7 @@ fn save_manga_chapter(state: &AppState, novel: &Novel, chapter: &Chapter, progre
     let pages = crate::manga::pages(&state.manga, &novel.source_id, &chapter.url, &memo)?;
     anyhow::ensure!(!pages.is_empty(), "the source returned no pages");
     let rel = state.downloads.target(&state.db, novel, chapter, None)?;
-    let out = state.downloads.dir.join(&rel);
+    let out = state.downloads.dir().join(&rel);
     let tmp = part_path(&out);
     let _ = std::fs::remove_dir_all(&tmp);
     std::fs::create_dir_all(&tmp)?;
@@ -437,8 +481,8 @@ mod tests {
 
         let first = d.target(&db, &na, &ca[0], None).unwrap();
         assert_eq!(first, "Ice_ Lord/Chapter 12");
-        std::fs::create_dir_all(d.dir.join(&first)).unwrap();
-        std::fs::write(d.dir.join(&first).join("000.webp"), b"x").unwrap();
+        std::fs::create_dir_all(d.dir().join(&first)).unwrap();
+        std::fs::write(d.dir().join(&first).join("000.webp"), b"x").unwrap();
         db.set_download_path(ca[0].id, Some(&first)).unwrap();
 
         // Same chapter name in the same manga, then the same title from another source.
@@ -454,8 +498,18 @@ mod tests {
         assert_eq!(d.downloaded(&db, a), [ca[0].id]);
 
         d.delete(&db, &[ca[0].id]).unwrap();
-        assert!(!d.dir.join("Ice_ Lord").exists(), "empty title folder removed");
+        assert!(!d.dir().join("Ice_ Lord").exists(), "empty title folder removed");
         assert!(d.downloaded(&db, a).is_empty());
+
+        // Moving the folder keeps downloads working (paths are relative).
+        db.set_download_path(ca[1].id, Some("Ice_ Lord/Chapter 12 b")).unwrap();
+        std::fs::create_dir_all(d.dir().join("Ice_ Lord/Chapter 12 b")).unwrap();
+        std::fs::write(d.dir().join("Ice_ Lord/Chapter 12 b/000.png"), b"x").unwrap();
+        let moved = root.join("elsewhere");
+        d.move_to(&moved).unwrap();
+        assert_eq!(d.dir(), moved);
+        assert_eq!(d.pages(&db, ca[1].id).unwrap(), ["000.png"]);
+        assert!(d.move_to(&moved.join("inside")).is_err(), "can't move into itself");
         drop(db);
         let _ = std::fs::remove_dir_all(root);
     }

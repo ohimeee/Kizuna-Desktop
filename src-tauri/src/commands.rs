@@ -16,6 +16,8 @@ pub struct AppState {
     pub downloads: Downloads,
     pub manga: manga::ExtHost,
     pub manga_tmp: std::path::PathBuf,
+    /// `<app data>/downloads`, used when the user hasn't picked another folder.
+    pub default_downloads: std::path::PathBuf,
     pub image_cache: std::path::PathBuf,
 }
 
@@ -760,6 +762,56 @@ pub async fn backup_import(state: Shared<'_>, request: tauri::ipc::Request<'_>) 
         let kinds = crate::backup::SourceKinds { novel, installed_novel, installed_manga };
         let (summary, repos) = crate::backup::import(&s.db, &backup, &kinds)?;
         Ok(BackupImportResult { summary, repos })
+    })
+    .await
+}
+
+// ---- download location -----------------------------------------------------------------------
+
+/// Settings key holding the download folder the user picked ("" or absent = default).
+pub const DOWNLOAD_DIR_SETTING: &str = "_downloadDir";
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadLocation {
+    path: String,
+    is_default: bool,
+}
+
+fn download_location(s: &AppState) -> DownloadLocation {
+    let dir = s.downloads.dir();
+    DownloadLocation { is_default: dir == s.default_downloads, path: dir.display().to_string() }
+}
+
+#[tauri::command]
+pub async fn downloads_location(state: Shared<'_>) -> CmdResult<DownloadLocation> {
+    blocking(&state, |s| Ok(download_location(s))).await
+}
+
+/// Moves the downloads (and future downloads) to `path`, or back to the default when None.
+#[tauri::command]
+pub async fn downloads_set_location(state: Shared<'_>, path: Option<String>) -> CmdResult<DownloadLocation> {
+    blocking(&state, move |s| {
+        let target = match path.as_deref().filter(|p| !p.trim().is_empty()) {
+            Some(p) => std::path::PathBuf::from(p),
+            None => s.default_downloads.clone(),
+        };
+        s.downloads.move_to(&target)?;
+        let saved = if target == s.default_downloads { String::new() } else { target.display().to_string() };
+        s.db.set_setting(DOWNLOAD_DIR_SETTING, &serde_json::Value::String(saved))?;
+        Ok(download_location(s))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn downloads_open_folder(state: Shared<'_>, app: tauri::AppHandle) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    blocking(&state, move |s| {
+        let dir = s.downloads.dir();
+        std::fs::create_dir_all(&dir)?;
+        app.opener().open_path(dir.display().to_string(), None::<&str>)?;
+        Ok(())
     })
     .await
 }

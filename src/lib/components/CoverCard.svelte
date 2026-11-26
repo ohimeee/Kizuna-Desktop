@@ -8,9 +8,10 @@
     title,
     cover,
     unread = 0,
+    downloaded = 0,
     inLibrary = false,
     dimmed = false,
-  }: { href: string; title: string; cover: string | null; unread?: number; inLibrary?: boolean; dimmed?: boolean } = $props();
+  }: { href: string; title: string; cover: string | null; unread?: number; downloaded?: number; inLibrary?: boolean; dimmed?: boolean } = $props();
 
   let failed = $state(false);
 </script>
@@ -25,6 +26,7 @@
     <div class="badges">
       {#if inLibrary}<span class="badge in-lib label-small">In library</span>{/if}
       {#if unread > 0}<span class="badge">{unread}</span>{/if}
+      {#if downloaded > 0}<span class="badge tertiary" title="{downloaded} downloaded">{downloaded}</span>{/if}
     </div>
     <div class="shade"></div>
     <div class="title title-small">{title}</div>

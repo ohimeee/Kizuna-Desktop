@@ -135,6 +135,8 @@ pub struct LibraryItem {
     pub total: i64,
     pub last_read: i64,
     pub category_ids: Vec<i64>,
+    /// Chapters with a saved download.
+    pub downloaded: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -494,7 +496,8 @@ impl Db {
                (SELECT COUNT(*) FROM chapters c WHERE c.novel_id = n.id),
                COALESCE((SELECT MAX(h.last_read) FROM history h JOIN chapters c ON c.id = h.chapter_id
                          WHERE c.novel_id = n.id), 0),
-               COALESCE((SELECT json_group_array(category_id) FROM novel_categories nc WHERE nc.novel_id = n.id), '[]')
+               COALESCE((SELECT json_group_array(category_id) FROM novel_categories nc WHERE nc.novel_id = n.id), '[]'),
+               (SELECT COUNT(*) FROM chapters c WHERE c.novel_id = n.id AND c.download_path IS NOT NULL)
              FROM novels n WHERE n.favorite = 1"
         ))?;
         let rows = stmt.query_map([], |r| {
@@ -505,6 +508,7 @@ impl Db {
                 total: r.get(15)?,
                 last_read: r.get(16)?,
                 category_ids: serde_json::from_str(&cats).unwrap_or_default(),
+                downloaded: r.get(18)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)

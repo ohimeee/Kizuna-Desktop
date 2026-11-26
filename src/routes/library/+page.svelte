@@ -117,6 +117,7 @@
       <span class="sep"></span>
       <button class="chip" class:selected={settings.values.libraryUnreadOnly} onclick={() => settings.set("libraryUnreadOnly", !settings.values.libraryUnreadOnly)}>Unread only</button>
       <button class="chip" class:selected={settings.values.showUnreadBadge} onclick={() => settings.set("showUnreadBadge", !settings.values.showUnreadBadge)}>Unread badge</button>
+      <button class="chip" class:selected={settings.values.showDownloadBadge} onclick={() => settings.set("showDownloadBadge", !settings.values.showDownloadBadge)}>Downloaded badge</button>
     </div>
   {/if}
 
@@ -132,7 +133,7 @@
     {:else}
       <div class="grid">
         {#each shown as n (n.id)}
-          <CoverCard href="/novel/{n.id}" title={n.title} cover={coverSrc(n.kind, n.sourceId, n.cover)} unread={settings.values.showUnreadBadge ? n.unread : 0} />
+          <CoverCard href="/novel/{n.id}" title={n.title} cover={coverSrc(n.kind, n.sourceId, n.cover)} unread={settings.values.showUnreadBadge ? n.unread : 0} downloaded={settings.values.showDownloadBadge ? n.downloaded : 0} />
         {/each}
       </div>
     {/if}

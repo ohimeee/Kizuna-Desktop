@@ -3,6 +3,7 @@
   import { api } from "$lib/api";
   import Icon from "$lib/components/Icon.svelte";
   import { downloads } from "$lib/downloads.svelte";
+  import { downloadLocation } from "$lib/downloadLocation.svelte";
 
   let size = $state<number | null>(null);
   onMount(async () => {
@@ -31,6 +32,7 @@
     <a class="icon-btn" href="/more" title="Back"><Icon name="arrow_back" /></a>
     <h1>Download queue</h1>
     {#if size !== null}<span class="body-small muted">{fmtSize(size)} on disk</span>{/if}
+    <button class="icon-btn" title="Open downloads folder" onclick={() => downloadLocation.openFolder()}><Icon name="folder" /></button>
     <button class="icon-btn" title={downloads.paused ? "Resume" : "Pause"} disabled={!downloads.count} onclick={togglePause}>
       <Icon name={downloads.paused ? "play_arrow" : "schedule"} />
     </button>

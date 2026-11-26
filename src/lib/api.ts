@@ -87,7 +87,7 @@ export type DownloadProgress =
   | { state: "failed"; chapterId: number; error: string }
   | { state: "removed"; chapterId: number };
 
-export interface LibraryItem extends Novel { unread: number; total: number; lastRead: number; categoryIds: number[] }
+export interface LibraryItem extends Novel { unread: number; total: number; lastRead: number; categoryIds: number[]; downloaded: number }
 export interface Category { id: number; name: string; sort: number }
 export interface HistoryItem { chapter: Chapter; novelTitle: string; novelCover: string | null; lastRead: number; kind: string; sourceId: string }
 export interface UpdateItem { chapter: Chapter; novelTitle: string; novelCover: string | null; kind: string; sourceId: string }
