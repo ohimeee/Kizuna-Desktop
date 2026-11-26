@@ -31,6 +31,9 @@ pub struct RepoExtension {
     pub name: String,
     pub pkg: String,
     pub apk_url: String,
+    /// Prebuilt JAR (v2 `resources.jarUrl`), preferred over the APK when present.
+    #[serde(default)]
+    pub jar_url: Option<String>,
     pub icon_url: String,
     pub lang: String,
     pub code: i64,
@@ -108,6 +111,8 @@ struct V2Ext {
 struct V2Resources {
     apk_url: String,
     #[serde(default)]
+    jar_url: Option<String>,
+    #[serde(default)]
     icon_url: Option<String>,
 }
 
@@ -179,6 +184,7 @@ fn from_v2(index: V2Index, repo: &str) -> Vec<RepoExtension> {
             name: e.name,
             pkg: e.package_name,
             apk_url: e.resources.apk_url,
+            jar_url: e.resources.jar_url.filter(|u| !u.is_empty()),
             icon_url: e.resources.icon_url.unwrap_or_default(),
             code: e.version_code,
             version: e.version_name,
@@ -191,6 +197,7 @@ fn from_v1(list: Vec<V1Ext>, base: &str, repo: &str) -> Vec<RepoExtension> {
     list.into_iter()
         .map(|e| RepoExtension {
             apk_url: format!("{base}/apk/{}", e.apk),
+            jar_url: None,
             icon_url: format!("{base}/icon/{}.png", e.pkg),
             sources: e
                 .sources
@@ -275,6 +282,9 @@ pub struct MangaDto {
     pub status: i32,
     #[serde(default)]
     pub initialized: bool,
+    /// Extension-private data (extension-lib 1.6); stored and handed back on later calls.
+    #[serde(default)]
+    pub memo: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,6 +302,8 @@ pub struct ChapterDto {
     pub date_upload: i64,
     pub chapter_number: f64,
     pub scanlator: Option<String>,
+    #[serde(default)]
+    pub memo: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -328,14 +340,19 @@ pub fn extensions(host: &ExtHost) -> Result<Vec<InstalledExtension>> {
     host.call("extensions", json!({}))
 }
 
-/// Downloads an extension APK from its repo and installs it through the host.
+/// Downloads an extension from its repo and installs it through the host. Prefers the prebuilt
+/// JAR (v2 repos): Keiyoushi's minified APKs don't survive dex2jar, and the host loads a JAR as-is.
 pub fn install(host: &ExtHost, ext: &RepoExtension, tmp_dir: &Path) -> Result<InstalledExtension> {
-    let url = ext.apk_url.clone();
+    let (url, ext_name) = match &ext.jar_url {
+        Some(jar) => (jar.as_str(), "jar"),
+        None => (ext.apk_url.as_str(), "apk"),
+    };
     std::fs::create_dir_all(tmp_dir)?;
-    let apk: PathBuf = tmp_dir.join(format!("{}.apk", ext.pkg));
-    HTTP.download(&url, &apk).with_context(|| format!("downloading {}", ext.name))?;
-    let result = host.call("install", json!({ "apk": apk }));
-    let _ = std::fs::remove_file(&apk);
+    // The host picks the install path from the file extension.
+    let file: PathBuf = tmp_dir.join(format!("{}.{ext_name}", ext.pkg));
+    HTTP.download(url, &file).with_context(|| format!("downloading {}", ext.name))?;
+    let result = host.call("install", json!({ "apk": file }));
+    let _ = std::fs::remove_file(&file);
     result
 }
 
@@ -352,19 +369,33 @@ pub fn browse(host: &ExtHost, source: &str, kind: &str, page: i32, query: &str) 
     }
 }
 
-pub fn details(host: &ExtHost, source: &str, url: &str, title: &str) -> Result<MangaDto> {
-    host.call("details", json!({ "source": source, "url": url, "title": title }))
+/// Stored memo text -> the JSON object the host expects (anything else becomes `{}`).
+pub fn memo_value(text: &str) -> serde_json::Value {
+    match serde_json::from_str(text) {
+        Ok(v @ serde_json::Value::Object(_)) => v,
+        _ => json!({}),
+    }
+}
+
+/// The memo to store, or `None` when the extension sent nothing worth keeping.
+pub fn memo_text(memo: &serde_json::Value) -> Option<String> {
+    memo.as_object().filter(|m| !m.is_empty()).map(|_| memo.to_string())
+}
+
+pub fn details(host: &ExtHost, source: &str, url: &str, title: &str, memo: &str) -> Result<MangaDto> {
+    host.call("details", json!({ "source": source, "url": url, "title": title, "memo": memo_value(memo) }))
 }
 
 /// Chapters, returned newest-first by extensions (Mihon convention); reversed to reading order.
-pub fn chapters(host: &ExtHost, source: &str, url: &str) -> Result<Vec<ChapterDto>> {
-    let mut list: Vec<ChapterDto> = host.call("chapters", json!({ "source": source, "url": url }))?;
+pub fn chapters(host: &ExtHost, source: &str, url: &str, memo: &str) -> Result<Vec<ChapterDto>> {
+    let mut list: Vec<ChapterDto> =
+        host.call("chapters", json!({ "source": source, "url": url, "memo": memo_value(memo) }))?;
     list.reverse();
     Ok(list)
 }
 
-pub fn pages(host: &ExtHost, source: &str, chapter_url: &str) -> Result<Vec<PageDto>> {
-    host.call("pages", json!({ "source": source, "url": chapter_url }))
+pub fn pages(host: &ExtHost, source: &str, chapter_url: &str, memo: &str) -> Result<Vec<PageDto>> {
+    host.call("pages", json!({ "source": source, "url": chapter_url, "memo": memo_value(memo) }))
 }
 
 pub fn image_url(host: &ExtHost, source: &str, page_url: &str) -> Result<String> {
@@ -394,20 +425,32 @@ mod tests {
     }
 
     #[test]
+    fn memo_round_trip() {
+        assert_eq!(memo_value(r#"{"a":1}"#), json!({"a": 1}));
+        assert_eq!(memo_value(""), json!({}));
+        assert_eq!(memo_value("[1]"), json!({}));
+        assert_eq!(memo_text(&json!({})), None);
+        assert_eq!(memo_text(&serde_json::Value::Null), None);
+        assert_eq!(memo_text(&json!({"a": 1})).as_deref(), Some(r#"{"a":1}"#));
+    }
+
+    #[test]
     fn parses_v1_index() {
         let raw = r#"[{"name":"Tachiyomi: Example","pkg":"eu.kanade.tachiyomi.extension.en.example","apk":"tachiyomi-en.example-v1.4.1.apk","lang":"en","code":1,"version":"1.4.1","nsfw":0,"sources":[{"name":"Example","lang":"en","id":"1234567890123456789","baseUrl":"https://example.com"}]}]"#;
         let list = parse_index(raw, "https://x.dev/repo", "i").unwrap();
         assert_eq!(list[0].apk_url, "https://x.dev/repo/apk/tachiyomi-en.example-v1.4.1.apk");
         assert_eq!(list[0].sources[0].id, "1234567890123456789");
+        assert_eq!(list[0].jar_url, None);
         assert!(!list[0].nsfw);
     }
 
     #[test]
     fn parses_v2_index() {
-        let raw = r#"{"name":"Keiyoushi","extensionList":{"extensions":[{"name":"AchyManga","packageName":"eu.kanade.tachiyomi.extension.all.achymanga","resources":{"apkUrl":"https://e.x/a.apk","iconUrl":"https://e.x/i.png"},"extensionLib":"1.6","versionCode":"106001","versionName":"1.6.1","contentWarning":"CONTENT_WARNING_MIXED","sources":[{"id":"9124545289113350724","name":"AchyManga","language":"es","homeUrl":"https://achymanga.online"},{"id":"2311891545723109443","name":"AchyManga","language":"en"}]}]}}"#;
+        let raw = r#"{"name":"Keiyoushi","extensionList":{"extensions":[{"name":"AchyManga","packageName":"eu.kanade.tachiyomi.extension.all.achymanga","resources":{"apkUrl":"https://e.x/a.apk","iconUrl":"https://e.x/i.png","jarUrl":"https://e.x/a.jar"},"extensionLib":"1.6","versionCode":"106001","versionName":"1.6.1","contentWarning":"CONTENT_WARNING_MIXED","sources":[{"id":"9124545289113350724","name":"AchyManga","language":"es","homeUrl":"https://achymanga.online"},{"id":"2311891545723109443","name":"AchyManga","language":"en"}]}]}}"#;
         let list = parse_index(raw, "https://x.dev/repo", "i").unwrap();
         let e = &list[0];
         assert_eq!((e.pkg.as_str(), e.apk_url.as_str(), e.code, e.lang.as_str()), ("eu.kanade.tachiyomi.extension.all.achymanga", "https://e.x/a.apk", 106001, "all"));
+        assert_eq!(e.jar_url.as_deref(), Some("https://e.x/a.jar"));
         assert!(!e.nsfw);
         assert_eq!(e.sources[1].base_url, None);
     }

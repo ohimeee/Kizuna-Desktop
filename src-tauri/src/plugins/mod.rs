@@ -119,6 +119,10 @@ pub struct ChapterItem {
     pub date_upload: i64,
     #[serde(default)]
     pub locked: bool,
+    /// Manga extension memo (JSON object text); never set by novel plugins. `None` keeps the
+    /// stored value.
+    #[serde(skip)]
+    pub memo: Option<String>,
 }
 
 fn default_chapter_number() -> f64 {

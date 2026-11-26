@@ -27,13 +27,10 @@ Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Deskto
 `ext-host/` runs Mihon extensions (Suwayomi's AndroidCompat + source API, MPL-2.0, see `ext-host/NOTICE.md`);
 Rust talks to it over JSON lines (`src-tauri/src/manga/`); UI: Browse → Manga, `/browse/manga/[id]`,
 `/manga-reader/[id]`. Verified live (Keiyoushi "Aqua Manga"): install of the prebuilt JAR, popular,
-details, chapters. Next, in order:
-1. Rust: add `jar_url` to `RepoExtension` (v2 index `resources.jarUrl`) and download the JAR instead
-   of the APK when present (Keiyoushi's minified code fails dex2jar; the host installs `.jar` as-is).
-2. Store extension `memo` JSON for manga and chapters (DB columns `memo TEXT DEFAULT '{}'` on novels +
-   chapters), save from browse/details/chapters, pass back in details/chapters/pages calls (the host
-   already accepts and returns `memo`). Pages fail without it ("Refresh the chapter list").
-3. Re-test the chain through pages + images, then hand to the user to try in the real app.
-4. Packaging (user chose option 1): download Eclipse Temurin JDK 25 (approved) to `jlink` a trimmed
+details, chapters, pages, images (`cargo run --example manga_chain -- <repo> "<name>"` runs the whole
+chain live). JARs are preferred over APKs; extension `memo` is stored (`memo` columns, schema v3) and passed back.
+Next, in order:
+1. User tests manga in the real app (manga added before schema v3 need one chapter-list refresh).
+2. Packaging (user chose option 1): download Eclipse Temurin JDK 25 (approved) to `jlink` a trimmed
    runtime with an AppCDS archive; add an "Enable manga" download in More; release v0.2.0.
 Later: JS manga plugins, "verify in browser" for Cloudflare sites, phone backup import.

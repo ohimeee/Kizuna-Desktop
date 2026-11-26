@@ -7,6 +7,7 @@ export interface RepoExtension {
   name: string;
   pkg: string;
   apkUrl: string;
+  jarUrl?: string | null;
   lang: string;
   code: number;
   version: string;

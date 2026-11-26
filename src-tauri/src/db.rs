@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::plugins::{ChapterItem, NovelDetails};
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS novels (
@@ -222,6 +222,15 @@ impl Db {
         if !has_kind {
             conn.execute_batch("ALTER TABLE novels ADD COLUMN kind TEXT NOT NULL DEFAULT 'novel';")?;
         }
+        // v3: manga extensions' private `memo` (extension-lib 1.6), handed back on later calls.
+        for table in ["novels", "chapters"] {
+            let has_memo: bool = conn
+                .prepare(&format!("SELECT 1 FROM pragma_table_info('{table}') WHERE name = 'memo'"))?
+                .exists([])?;
+            if !has_memo {
+                conn.execute_batch(&format!("ALTER TABLE {table} ADD COLUMN memo TEXT NOT NULL DEFAULT '{{}}';"))?;
+            }
+        }
         conn.pragma_update(None, "user_version", SCHEMA_VERSION)?;
         Ok(Self { conn: Mutex::new(conn) })
     }
@@ -291,6 +300,20 @@ impl Db {
         Ok(())
     }
 
+    /// A manga's extension memo (JSON object text, `{}` when none).
+    pub fn novel_memo(&self, id: i64) -> Result<String> {
+        Ok(self.conn().query_row("SELECT memo FROM novels WHERE id = ?1", [id], |r| r.get(0))?)
+    }
+
+    pub fn set_novel_memo(&self, id: i64, memo: &str) -> Result<()> {
+        self.conn().execute("UPDATE novels SET memo = ?2 WHERE id = ?1", params![id, memo])?;
+        Ok(())
+    }
+
+    pub fn chapter_memo(&self, id: i64) -> Result<String> {
+        Ok(self.conn().query_row("SELECT memo FROM chapters WHERE id = ?1", [id], |r| r.get(0))?)
+    }
+
     pub fn set_favorite(&self, id: i64, favorite: bool) -> Result<()> {
         self.conn().execute(
             "UPDATE novels SET favorite = ?2,
@@ -330,12 +353,12 @@ impl Db {
         {
             let mut exists = tx.prepare_cached("SELECT 1 FROM chapters WHERE novel_id = ?1 AND url = ?2")?;
             let mut upsert = tx.prepare_cached(
-                "INSERT INTO chapters (novel_id, url, name, chapter_number, date_upload, source_order, locked, date_fetch)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                "INSERT INTO chapters (novel_id, url, name, chapter_number, date_upload, source_order, locked, date_fetch, memo)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, COALESCE(?9, '{}'))
                  ON CONFLICT(novel_id, url) DO UPDATE SET
                    name = excluded.name, chapter_number = excluded.chapter_number,
                    date_upload = excluded.date_upload, source_order = excluded.source_order,
-                   locked = excluded.locked",
+                   locked = excluded.locked, memo = COALESCE(?9, memo)",
             )?;
             for (i, c) in fetched.iter().enumerate() {
                 let is_new = !exists.exists(params![novel_id, c.url])?;
@@ -345,7 +368,7 @@ impl Db {
                     new_count += 1;
                 }
                 upsert.execute(params![
-                    novel_id, c.url, c.name, c.chapter_number, c.date_upload, i as i64, c.locked, fetch_time
+                    novel_id, c.url, c.name, c.chapter_number, c.date_upload, i as i64, c.locked, fetch_time, c.memo
                 ])?;
             }
         }
@@ -566,7 +589,28 @@ mod tests {
     use super::*;
 
     fn ch(url: &str) -> ChapterItem {
-        ChapterItem { name: url.into(), url: url.into(), chapter_number: -1.0, date_upload: 0, locked: false }
+        ChapterItem { name: url.into(), url: url.into(), chapter_number: -1.0, date_upload: 0, locked: false, memo: None }
+    }
+
+    #[test]
+    fn memos_are_stored_and_kept() {
+        let dir = std::env::temp_dir().join(format!("kizuna-test-memo-{}.db", now_ms()));
+        let db = Db::open(&dir).unwrap();
+        let id = db.upsert_listed("9", "/m", "M", None, "manga").unwrap();
+        assert_eq!(db.novel_memo(id).unwrap(), "{}");
+        db.set_novel_memo(id, r#"{"k":1}"#).unwrap();
+        assert_eq!(db.novel_memo(id).unwrap(), r#"{"k":1}"#);
+
+        let mut a = ch("a");
+        a.memo = Some(r#"{"p":"x"}"#.into());
+        db.sync_chapters(id, &[a, ch("b")]).unwrap();
+        let chapters = db.chapters(id).unwrap();
+        assert_eq!(db.chapter_memo(chapters[0].id).unwrap(), r#"{"p":"x"}"#);
+        assert_eq!(db.chapter_memo(chapters[1].id).unwrap(), "{}");
+        db.sync_chapters(id, &[ch("a"), ch("b")]).unwrap();
+        assert_eq!(db.chapter_memo(chapters[0].id).unwrap(), r#"{"p":"x"}"#, "None keeps the stored memo");
+        drop(db);
+        let _ = std::fs::remove_file(dir);
     }
 
     #[test]

@@ -556,6 +556,9 @@ pub async fn manga_browse(
         let mut novels = Vec::with_capacity(res.mangas.len());
         for m in res.mangas {
             let id = s.db.upsert_listed(&source_id, &m.url, &m.title, m.thumbnail_url.as_deref(), "manga")?;
+            if let Some(memo) = manga::memo_text(&m.memo) {
+                s.db.set_novel_memo(id, &memo)?;
+            }
             novels.push(BrowseItem { id, favorite: favorites.contains(&m.url), title: m.title, url: m.url, cover: m.thumbnail_url });
         }
         Ok(BrowsePage { novels, has_next_page: res.has_next_page })
@@ -566,7 +569,11 @@ pub async fn manga_browse(
 /// Manga equivalent of a novel refresh: details and/or chapters through the host.
 pub fn manga_refresh(s: &AppState, novel: &Novel, details: bool, chapters: bool) -> anyhow::Result<usize> {
     if details {
-        let d = manga::details(&s.manga, &novel.source_id, &novel.url, &novel.title)?;
+        let memo = s.db.novel_memo(novel.id)?;
+        let d = manga::details(&s.manga, &novel.source_id, &novel.url, &novel.title, &memo)?;
+        if let Some(memo) = manga::memo_text(&d.memo) {
+            s.db.set_novel_memo(novel.id, &memo)?;
+        }
         let nd = plugins::NovelDetails {
             title: Some(d.title).filter(|t| !t.is_empty()),
             cover: d.thumbnail_url,
@@ -581,9 +588,11 @@ pub fn manga_refresh(s: &AppState, novel: &Novel, details: bool, chapters: bool)
         s.db.apply_details(novel.id, &nd)?;
     }
     if chapters {
-        let list: Vec<plugins::ChapterItem> = manga::chapters(&s.manga, &novel.source_id, &novel.url)?
+        let memo = s.db.novel_memo(novel.id)?;
+        let list: Vec<plugins::ChapterItem> = manga::chapters(&s.manga, &novel.source_id, &novel.url, &memo)?
             .into_iter()
             .map(|c| plugins::ChapterItem {
+                memo: manga::memo_text(&c.memo),
                 name: c.name,
                 url: c.url,
                 chapter_number: c.chapter_number,
@@ -610,7 +619,8 @@ pub async fn manga_pages(state: Shared<'_>, chapter_id: i64) -> CmdResult<Vec<Ma
     blocking(&state, move |s| {
         let chapter = s.db.chapter(chapter_id)?;
         let novel = s.db.novel(chapter.novel_id)?;
-        let pages = manga::pages(&s.manga, &novel.source_id, &chapter.url)?;
+        let memo = s.db.chapter_memo(chapter_id)?;
+        let pages = manga::pages(&s.manga, &novel.source_id, &chapter.url, &memo)?;
         Ok(pages
             .into_iter()
             .map(|p| MangaPageRef { index: p.index, image: p.image_url.filter(|u| !u.is_empty()), page_url: p.url })

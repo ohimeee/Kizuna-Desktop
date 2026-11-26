@@ -3,7 +3,7 @@
   // vertical scroll), paged left-to-right, paged right-to-left. Progress is the page index,
   // stored in the same chapter fields the novel reader uses.
   import { page } from "$app/state";
-  import { goto } from "$app/navigation";
+  import { afterNavigate, goto } from "$app/navigation";
   import { api, errorText, type Chapter } from "$lib/api";
   import Icon from "$lib/components/Icon.svelte";
   import ChapterListPanel from "$lib/reader/ChapterListPanel.svelte";
@@ -167,10 +167,19 @@
     goChapter(next);
   }
 
+  // Page that opened the reader (chapter switches replace the entry, so only the first counts).
+  let openedFrom: string | null = null;
+  afterNavigate(({ from }) => {
+    if (openedFrom === null) openedFrom = from?.url.pathname ?? "";
+  });
+
   function back() {
     saveNow();
-    if (chapter) goto(`/novel/${chapter.novelId}`);
-    else history.back();
+    const details = chapter ? `/novel/${chapter.novelId}` : null;
+    // Step back to the details page instead of stacking a second copy of it, so its own back
+    // button still reaches the source/library. From History/Updates, swap the reader for details.
+    if (!details || openedFrom === details) history.back();
+    else goto(details, { replaceState: true });
   }
 
   async function toggleBookmark() {
