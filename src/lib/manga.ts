@@ -41,7 +41,13 @@ export interface MangaEngineStatus {
   /** Running from KIZUNA_JAVA / KIZUNA_EXT_HOST_JAR. */
   dev: boolean;
 }
-export interface MangaPageRef { index: number; image: string | null; pageUrl: string }
+export interface MangaPageRef {
+  index: number;
+  image: string | null;
+  pageUrl: string;
+  /** Downloaded copy (`<chapter id>/<file>`), served from the downloads folder. */
+  local?: string | null;
+}
 
 export const mangaApi = {
   status: () => invoke<MangaEngineStatus>("manga_engine_status"),
@@ -68,6 +74,7 @@ export function mangaImage(sourceId: string, url: string | null | undefined): st
 
 /** A reader page whose image URL the source resolves from the page URL. */
 export function mangaPageImage(sourceId: string, page: MangaPageRef): string {
+  if (page.local) return `${KIMG}?l=${encodeURIComponent(page.local)}`;
   return page.image
     ? mangaImage(sourceId, page.image)!
     : `${KIMG}?s=${encodeURIComponent(sourceId)}&p=${encodeURIComponent(page.pageUrl)}`;

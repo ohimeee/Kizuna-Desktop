@@ -6,6 +6,7 @@
   import { api, errorText, readerHref, type Category, type Chapter, type NovelView } from "$lib/api";
   import { coverSrc } from "$lib/manga";
   import Dialog from "$lib/components/Dialog.svelte";
+  import DownloadCircle from "$lib/components/DownloadCircle.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import { toast } from "$lib/components/Toasts.svelte";
   import { formatDate } from "$lib/format";
@@ -188,7 +189,7 @@
     <button class="icon-btn" title="Back" onclick={() => history.back()}><Icon name="arrow_back" /></button>
     {#if selected.size}
       <h1>{selected.size} selected</h1>
-      {#if view?.novel.kind !== "manga"}<button class="icon-btn" title="Download" onclick={() => download([...selected])}><Icon name="download" /></button>{/if}
+      <button class="icon-btn" title="Download" onclick={() => download([...selected])}><Icon name="download" /></button>
       {#if selectedList.some((c) => downloaded.has(c.id))}
         <button class="icon-btn" title="Delete downloads" onclick={() => deleteDownloads([...selected])}><Icon name="delete" /></button>
       {/if}
@@ -198,7 +199,7 @@
       <button class="icon-btn" title="Clear selection" onclick={() => (selected = new Set())}><Icon name="close" /></button>
     {:else}
       <span style="flex: 1"></span>
-      {#if view && view.novel.kind !== "manga"}
+      {#if view}
         <div class="menu-wrap">
           <button class="icon-btn" title="Download" onclick={() => (showDlMenu = !showDlMenu)}><Icon name="download" /></button>
           {#if showDlMenu}
@@ -308,23 +309,22 @@
                     </div>
                   </div>
                 </a>
-                {#if downloaded.has(c.id)}
-                  <button class="icon-btn dl done" title="Downloaded (click to delete)" onclick={() => deleteDownloads([c.id])}><Icon name="check_circle" fill size={20} /></button>
-                {:else if dl === "downloading"}
-                  <span class="icon-btn dl"><span class="mini-spin"></span></span>
-                {:else if dl === "queued"}
-                  <button class="icon-btn dl" title="Queued (click to cancel)" onclick={() => api.downloadsCancel([c.id])}><Icon name="schedule" size={20} /></button>
-                {:else if dl === "failed"}
-                  <button class="icon-btn dl failed" title={`Failed: ${downloads.errors[c.id] ?? ""} (click to retry)`} onclick={() => download([c.id])}><Icon name="error" size={20} /></button>
-                {/if}
                 <div class="row-actions">
                   <button class="icon-btn" title={c.bookmark ? "Remove bookmark" : "Bookmark"} onclick={() => setBookmark([c.id], !c.bookmark)}><Icon name="bookmark" fill={c.bookmark} size={20} /></button>
                   <button class="icon-btn" title={c.read ? "Mark as unread" : "Mark as read"} onclick={() => setRead([c.id], !c.read)}><Icon name={c.read ? "remove_done" : "done_all"} size={20} /></button>
                   <button class="icon-btn" title="Mark previous as read" onclick={() => markPreviousRead(c)}><Icon name="vertical_align_top" size={20} /></button>
-                  {#if !downloaded.has(c.id) && !dl && view.novel.kind !== "manga"}
-                    <button class="icon-btn" title="Download" onclick={() => download([c.id])}><Icon name="download" size={20} /></button>
-                  {/if}
                 </div>
+                {#if downloaded.has(c.id)}
+                  <DownloadCircle state="done" title="Downloaded (click to delete)" onclick={() => deleteDownloads([c.id])} />
+                {:else if dl === "downloading"}
+                  <DownloadCircle state="downloading" progress={downloads.progress[c.id]} title="Downloading…" />
+                {:else if dl === "queued"}
+                  <DownloadCircle state="queued" title="Queued (click to cancel)" onclick={() => api.downloadsCancel([c.id])} />
+                {:else if dl === "failed"}
+                  <DownloadCircle state="failed" title={`Failed: ${downloads.errors[c.id] ?? ""} (click to retry)`} onclick={() => download([c.id])} />
+                {:else}
+                  <DownloadCircle state="none" title="Download" onclick={() => download([c.id])} />
+                {/if}
               </li>
             {/each}
           </ul>
@@ -477,17 +477,6 @@
   .hint { margin: 0; padding: 6px 20px; }
   .cat { display: flex; align-items: center; gap: 12px; padding: 8px 0; color: var(--on-surface); }
   :global(.spin) { animation: spin 0.9s linear infinite; }
-  .dl { flex: none; }
-  .dl.done { color: var(--tertiary); }
-  .dl.failed { color: var(--error); }
-  .mini-spin {
-    width: 18px;
-    height: 18px;
-    border: 2px solid var(--secondary-container);
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
-  }
   .menu-wrap { position: relative; }
   .menu-scrim { position: fixed; inset: 0; z-index: 30; }
   .menu {

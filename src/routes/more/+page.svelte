@@ -209,7 +209,7 @@
 </Dialog>
 
 <style>
-  .content { max-width: 860px; padding: 0 24px 32px; }
+  .content { padding: 0 24px 32px; }
   section { margin-bottom: 24px; }
   h2 { color: var(--primary); margin: 16px 0 8px; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; }

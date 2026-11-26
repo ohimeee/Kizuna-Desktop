@@ -14,8 +14,8 @@ use tauri::http::{Response, StatusCode, header};
 
 use super::ExtHost;
 
-pub fn handle(host: &ExtHost, cache_dir: &Path, uri: &str) -> Response<Vec<u8>> {
-    match serve(host, cache_dir, uri) {
+pub fn handle(host: &ExtHost, cache_dir: &Path, downloads: &crate::downloads::Downloads, db: &crate::db::Db, uri: &str) -> Response<Vec<u8>> {
+    match serve(host, cache_dir, downloads, db, uri) {
         Ok((bytes, mime)) => Response::builder()
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, mime)
@@ -32,8 +32,15 @@ pub fn handle(host: &ExtHost, cache_dir: &Path, uri: &str) -> Response<Vec<u8>> 
     }
 }
 
-fn serve(host: &ExtHost, cache_dir: &Path, uri: &str) -> Result<(Vec<u8>, &'static str)> {
+fn serve(host: &ExtHost, cache_dir: &Path, downloads: &crate::downloads::Downloads, db: &crate::db::Db, uri: &str) -> Result<(Vec<u8>, &'static str)> {
     let parsed = url::Url::parse(uri).with_context(|| format!("bad image url {uri}"))?;
+    // A downloaded page: `?l=<chapter id>/<file>`, only ever a page of a downloaded chapter.
+    if let Some((_, l)) = parsed.query_pairs().find(|(k, _)| k == "l") {
+        let path = downloads.page_file(db, &l).ok_or_else(|| anyhow!("bad local page {l}"))?;
+        let bytes = std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
+        let mime = sniff(&bytes);
+        return Ok((bytes, mime));
+    }
     let mut source = None;
     let mut image = None;
     let mut page = None;
@@ -65,6 +72,19 @@ fn serve(host: &ExtHost, cache_dir: &Path, uri: &str) -> Result<(Vec<u8>, &'stat
     let bytes = std::fs::read(&path)?;
     let mime = sniff(&bytes);
     Ok((bytes, mime))
+}
+
+/// File extension for saved pages, from the file's magic bytes.
+pub fn extension(b: &[u8]) -> &'static str {
+    match sniff(b) {
+        "image/jpeg" => "jpg",
+        "image/png" => "png",
+        "image/gif" => "gif",
+        "image/webp" => "webp",
+        "image/avif" => "avif",
+        "image/jxl" => "jxl",
+        _ => "bin",
+    }
 }
 
 /// Content type from the file's magic bytes (the cache doesn't keep headers).

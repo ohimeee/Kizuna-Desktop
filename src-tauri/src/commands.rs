@@ -162,7 +162,7 @@ fn novel_view(s: &AppState, id: i64) -> anyhow::Result<NovelView> {
     Ok(NovelView {
         chapters: s.db.chapters(id)?,
         category_ids: s.db.novel_categories(id)?,
-        downloaded: s.downloads.downloaded(id),
+        downloaded: s.downloads.downloaded(&s.db, id),
         novel,
         source,
         source_name,
@@ -225,7 +225,7 @@ pub async fn chapter_get(state: Shared<'_>, id: i64) -> CmdResult<Chapter> {
 pub async fn chapter_content(state: Shared<'_>, chapter_id: i64) -> CmdResult<String> {
     blocking(&state, move |s| {
         let chapter = s.db.chapter(chapter_id)?;
-        if let Some(saved) = s.downloads.read(chapter.novel_id, chapter.id) {
+        if let Some(saved) = s.downloads.read(&s.db, chapter.id) {
             return Ok(saved);
         }
         let novel = s.db.novel(chapter.novel_id)?;
@@ -376,7 +376,7 @@ pub async fn downloads_enqueue(state: Shared<'_>, app: tauri::AppHandle, chapter
             .clone();
             items.push(QueueItem { chapter_id: c.id, novel_id: c.novel_id, chapter_name: c.name, novel_title: title });
         }
-        s.downloads.enqueue(items, &app);
+        s.downloads.enqueue(&s.db, items, &app);
         Ok(())
     })
     .await
@@ -420,12 +420,16 @@ pub async fn downloads_state(state: Shared<'_>) -> CmdResult<DownloadState> {
 
 #[tauri::command]
 pub async fn downloads_delete(state: Shared<'_>, novel_id: i64, chapter_ids: Vec<i64>) -> CmdResult<()> {
-    blocking(&state, move |s| s.downloads.delete(novel_id, &chapter_ids)).await
+    blocking(&state, move |s| {
+        let _ = novel_id; // kept in the API; paths come from each chapter
+        s.downloads.delete(&s.db, &chapter_ids)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn downloads_delete_novel(state: Shared<'_>, novel_id: i64) -> CmdResult<()> {
-    blocking(&state, move |s| s.downloads.delete_novel(novel_id)).await
+    blocking(&state, move |s| s.downloads.delete_novel(&s.db, novel_id)).await
 }
 
 #[tauri::command]
@@ -676,6 +680,8 @@ pub struct MangaPageRef {
     /// Direct image URL when the source already knows it; otherwise resolved from `page_url`.
     image: Option<String>,
     page_url: String,
+    /// Downloaded copy, as `<chapter id>/<file>` for the kimg route's `l=`.
+    local: Option<String>,
 }
 
 #[tauri::command]
@@ -683,11 +689,24 @@ pub async fn manga_pages(state: Shared<'_>, chapter_id: i64) -> CmdResult<Vec<Ma
     blocking(&state, move |s| {
         let chapter = s.db.chapter(chapter_id)?;
         let novel = s.db.novel(chapter.novel_id)?;
+        // Downloaded: read the saved pages, no network or engine needed.
+        if let Some(files) = s.downloads.pages(&s.db, chapter.id) {
+            return Ok(files
+                .into_iter()
+                .enumerate()
+                .map(|(i, f)| MangaPageRef {
+                    index: i as i32,
+                    image: None,
+                    page_url: String::new(),
+                    local: Some(format!("{}/{f}", chapter.id)),
+                })
+                .collect());
+        }
         let memo = s.db.chapter_memo(chapter_id)?;
         let pages = manga::pages(&s.manga, &novel.source_id, &chapter.url, &memo)?;
         Ok(pages
             .into_iter()
-            .map(|p| MangaPageRef { index: p.index, image: p.image_url.filter(|u| !u.is_empty()), page_url: p.url })
+            .map(|p| MangaPageRef { index: p.index, image: p.image_url.filter(|u| !u.is_empty()), page_url: p.url, local: None })
             .collect())
     })
     .await

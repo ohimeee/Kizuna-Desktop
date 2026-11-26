@@ -82,6 +82,7 @@ export interface DownloadState { active: QueueItem | null; queue: QueueItem[]; p
 export type DownloadProgress =
   | { state: "queued"; chapterId: number }
   | { state: "downloading"; chapterId: number }
+  | { state: "progress"; chapterId: number; done: number; total: number }
   | { state: "done"; chapterId: number; novelId: number }
   | { state: "failed"; chapterId: number; error: string }
   | { state: "removed"; chapterId: number };

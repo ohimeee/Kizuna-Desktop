@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::plugins::{ChapterItem, NovelDetails};
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS novels (
@@ -222,6 +222,11 @@ impl Db {
         if !has_kind {
             conn.execute_batch("ALTER TABLE novels ADD COLUMN kind TEXT NOT NULL DEFAULT 'novel';")?;
         }
+        // v4: where a chapter's download is saved, relative to the downloads folder.
+        let has_dl: bool = conn.prepare("SELECT 1 FROM pragma_table_info('chapters') WHERE name = 'download_path'")?.exists([])?;
+        if !has_dl {
+            conn.execute_batch("ALTER TABLE chapters ADD COLUMN download_path TEXT;")?;
+        }
         // v3: manga extensions' private `memo` (extension-lib 1.6), handed back on later calls.
         for table in ["novels", "chapters"] {
             let has_memo: bool = conn
@@ -317,6 +322,51 @@ impl Db {
     pub fn set_novel_memo(&self, id: i64, memo: &str) -> Result<()> {
         self.conn().execute("UPDATE novels SET memo = ?2 WHERE id = ?1", params![id, memo])?;
         Ok(())
+    }
+
+    // ---- download paths (relative to the downloads folder; see downloads.rs) -------------
+
+    pub fn download_path(&self, chapter_id: i64) -> Result<Option<String>> {
+        Ok(self
+            .conn()
+            .query_row("SELECT download_path FROM chapters WHERE id = ?1", [chapter_id], |r| r.get(0))
+            .optional()?
+            .flatten())
+    }
+
+    pub fn set_download_path(&self, chapter_id: i64, path: Option<&str>) -> Result<()> {
+        self.conn().execute("UPDATE chapters SET download_path = ?2 WHERE id = ?1", params![chapter_id, path])?;
+        Ok(())
+    }
+
+    /// (chapter id, path) of a novel's downloaded chapters.
+    pub fn download_paths(&self, novel_id: i64) -> Result<Vec<(i64, String)>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare_cached("SELECT id, download_path FROM chapters WHERE novel_id = ?1 AND download_path IS NOT NULL")?;
+        let rows = stmt.query_map([novel_id], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// The folder a novel's downloads already use, if any.
+    pub fn novel_download_folder(&self, novel_id: i64) -> Result<Option<String>> {
+        Ok(self.download_paths(novel_id)?.into_iter().find_map(|(_, p)| p.split_once('/').map(|(f, _)| f.to_string())))
+    }
+
+    /// The novel whose downloads use `folder`, if any.
+    pub fn download_folder_owner(&self, folder: &str) -> Result<Option<i64>> {
+        Ok(self
+            .conn()
+            .query_row(
+                "SELECT novel_id FROM chapters WHERE substr(download_path, 1, length(?1) + 1) = ?1 || '/' LIMIT 1",
+                [folder],
+                |r| r.get(0),
+            )
+            .optional()?)
+    }
+
+    /// The chapter saved at exactly `path`, if any.
+    pub fn download_path_owner(&self, path: &str) -> Result<Option<i64>> {
+        Ok(self.conn().query_row("SELECT id FROM chapters WHERE download_path = ?1 LIMIT 1", [path], |r| r.get(0)).optional()?)
     }
 
     pub fn chapter_memo(&self, id: i64) -> Result<String> {

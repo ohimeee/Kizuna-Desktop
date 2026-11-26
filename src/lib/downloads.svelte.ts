@@ -8,6 +8,8 @@ class DownloadsStore {
   /** Per-chapter transient state (downloaded chapters are tracked by the screens). */
   status = $state<Record<number, ChapterDl>>({});
   errors = $state<Record<number, string>>({});
+  /** 0..1 while a chapter downloads page by page (manga); absent = unknown. */
+  progress = $state<Record<number, number>>({});
   active = $state<QueueItem | null>(null);
   queue = $state<QueueItem[]>([]);
   paused = $state(false);
@@ -42,16 +44,23 @@ class DownloadsStore {
       case "downloading":
         this.status[p.chapterId] = "downloading";
         break;
+      case "progress":
+        this.status[p.chapterId] = "downloading";
+        this.progress[p.chapterId] = p.total ? p.done / p.total : 0;
+        return; // frequent; the queue doesn't change
       case "done":
         delete this.status[p.chapterId];
+        delete this.progress[p.chapterId];
         this.lastDone = { chapterId: p.chapterId, novelId: p.novelId };
         break;
       case "failed":
         this.status[p.chapterId] = "failed";
+        delete this.progress[p.chapterId];
         this.errors[p.chapterId] = p.error;
         break;
       case "removed":
         delete this.status[p.chapterId];
+        delete this.progress[p.chapterId];
         break;
     }
     // The queue list itself is cheap to re-read.

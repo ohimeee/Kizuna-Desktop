@@ -33,6 +33,8 @@ pub fn run() {
             let db = db::Db::open(&data_dir.join("kizuna.db"))?;
             let plugins = plugins::PluginStore::new(data_dir.join("sources"))?;
             let downloads = downloads::Downloads::new(data_dir.join("downloads"))?;
+            // Downloads from before readable names: <novel id>/<chapter id> -> <title>/<chapter>.
+            downloads.migrate_numeric(&db);
             let engine_dir = data_dir.join("manga-engine");
             let manga = manga::ExtHost::new(manga::EnginePaths::resolve(&engine_dir, data_dir.join("manga")));
             app.manage(Arc::new(AppState {
@@ -60,7 +62,7 @@ pub fn run() {
             let state = ctx.app_handle().state::<Arc<AppState>>().inner().clone();
             let uri = request.uri().to_string();
             std::thread::spawn(move || {
-                responder.respond(manga::images::handle(&state.manga, &state.image_cache, &uri));
+                responder.respond(manga::images::handle(&state.manga, &state.image_cache, &state.downloads, &state.db, &uri));
             });
         })
         .invoke_handler(tauri::generate_handler![
