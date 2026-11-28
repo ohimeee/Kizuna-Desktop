@@ -25,6 +25,9 @@ Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Deskto
   `.\gradlew.bat :host:fatJar`. Never pipe gradlew through `tail`. JBR can't `jlink` (no jmods).
 - Tests: `npm test` (run it from `D:\...`: a lowercase `d:\` working dir loads vitest twice and fails with
   "Cannot read properties of undefined (reading 'config')"), `cargo test --lib` (in src-tauri), `cargo run --example smoke -- D:\Coding\Kizuna\novel-sources`.
+  The smoke exe is broken since v0.4.0: it dies at launch with 0xC0000139 (STATUS_ENTRYPOINT_NOT_FOUND),
+  likely the dialog plugin needing comctl32 v6; a side-by-side .manifest didn't fix it. Until it's fixed,
+  test a plugin by running it in Node with a stand-in `Http.get` (curl with the app's User-Agent).
 
 ## Phase 4, manga add-on (own engine): done
 `ext-host/` runs Mihon extensions (Suwayomi's AndroidCompat + source API, MPL-2.0, see `ext-host/NOTICE.md`);
