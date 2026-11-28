@@ -224,3 +224,24 @@ img {
   min-height: 0;
   overflow-y: auto;
 }
+
+/* keyboard keys in hints and shortcut lists */
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--outline-variant);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  font: 600 11px/1 "Segoe UI", system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+/* focus: no ring after a mouse click, a clear accent ring when moving with the keyboard */
+:focus:not(:focus-visible) { outline: none; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }

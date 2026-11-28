@@ -143,9 +143,20 @@
           </div>
         </div>
       {/if}
-      <div class="keys body-small muted">
-        <div class="label-medium">Keyboard</div>
-        ↑ ↓ / wheel scroll · PgUp PgDn / Space page · ← → chapter · Home End · C chapters · S settings · F11 fullscreen · Esc back
+      <div class="keys">
+        <div class="label-medium keys-title">Keyboard shortcuts</div>
+        <dl class="body-small">
+          <dt><kbd>↑</kbd><kbd>↓</kbd></dt><dd>Scroll (or the mouse wheel)</dd>
+          <dt><kbd>PgUp</kbd><kbd>PgDn</kbd></dt><dd>Page up / down</dd>
+          <dt><kbd>Space</kbd></dt><dd>Page down{v.autoScroll ? "; pauses auto-scroll" : ""}</dd>
+          <dt><kbd>←</kbd><kbd>→</kbd></dt><dd>Previous / next chapter</dd>
+          <dt><kbd>Home</kbd><kbd>End</kbd></dt><dd>Top / end of the chapter</dd>
+          <dt><kbd>C</kbd></dt><dd>Chapter list</dd>
+          <dt><kbd>S</kbd></dt><dd>Reader settings</dd>
+          <dt><kbd>B</kbd></dt><dd>Bookmark this chapter</dd>
+          <dt><kbd>F11</kbd></dt><dd>Fullscreen</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Close a panel, or go back</dd>
+        </dl>
       </div>
     {/if}
   </div>
@@ -251,6 +262,10 @@
   }
   .toggle input:checked + .switch { background: var(--primary); border-color: var(--primary); }
   .toggle input:checked + .switch::after { left: 22px; top: 2px; width: 24px; height: 24px; background: var(--on-primary); }
-  .keys { margin-top: 16px; line-height: 1.8; }
+  .keys { margin-top: 20px; padding: 14px 16px; border-radius: var(--radius-m); background: var(--surface-container); }
+  .keys-title { margin-bottom: 10px; color: var(--on-surface); }
+  .keys dl { display: grid; grid-template-columns: auto 1fr; gap: 9px 14px; align-items: center; margin: 0; }
+  .keys dt { display: flex; gap: 4px; }
+  .keys dd { margin: 0; color: var(--on-surface-variant); }
   @keyframes slide { from { transform: translateX(100%); } }
 </style>

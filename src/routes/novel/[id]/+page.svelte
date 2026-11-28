@@ -137,12 +137,16 @@
   const anyRead = $derived(view?.chapters.some((c) => c.read || c.lastParagraph > 0) ?? false);
 
   function onRowClick(e: MouseEvent, c: Chapter) {
-    if (e.ctrlKey || e.metaKey || selected.size > 0) {
+    // Shift+click starts a selection too (like File Explorer): with nothing selected it selects
+    // that chapter as the anchor; the next Shift+click selects everything between the two.
+    // Without this a Shift+click fell through to the link and opened the chapter.
+    if (e.ctrlKey || e.metaKey || e.shiftKey || selected.size > 0) {
       e.preventDefault();
       const next = new Set(selected);
-      if (e.shiftKey && lastClicked !== null) {
-        const ids = shown.map((x) => x.id);
-        const [a, b] = [ids.indexOf(lastClicked), ids.indexOf(c.id)].sort((x, y) => x - y);
+      const ids = shown.map((x) => x.id);
+      const anchor = lastClicked !== null && selected.size > 0 ? ids.indexOf(lastClicked) : -1;
+      if (e.shiftKey && anchor >= 0) {
+        const [a, b] = [anchor, ids.indexOf(c.id)].sort((x, y) => x - y);
         for (const cid of ids.slice(a, b + 1)) next.add(cid);
       } else if (next.has(c.id)) next.delete(c.id);
       else next.add(c.id);
@@ -175,7 +179,9 @@
 
   function onKey(e: KeyboardEvent) {
     if (e.key === "Escape" && selected.size) selected = new Set();
-    if ((e.ctrlKey || e.metaKey) && e.key === "a" && (e.target as HTMLElement).tagName !== "INPUT") {
+    // e.code, not e.key: with Caps Lock on (or Shift held) e.key is "A", which fell through to
+    // the browser's select-all-text
+    if ((e.ctrlKey || e.metaKey) && e.code === "KeyA" && (e.target as HTMLElement).tagName !== "INPUT") {
       e.preventDefault();
       selected = new Set(shown.map((c) => c.id));
     }
@@ -329,7 +335,17 @@
             {/each}
           </ul>
         </div>
-        <p class="hint body-small muted">Ctrl+click to select · Shift+click for a range · Ctrl+A selects all</p>
+        <div class="hint body-small">
+          {#if selected.size}
+            <span><kbd>Shift</kbd> + click <em>a range</em></span>
+            <span><kbd>Ctrl</kbd><kbd>A</kbd> <em>select all</em></span>
+            <span><kbd>Esc</kbd> <em>clear</em></span>
+          {:else}
+            <span><kbd>Ctrl</kbd> + click <em>select chapters</em></span>
+            <span><kbd>Shift</kbd> + click <em>a range</em></span>
+            <span><kbd>Ctrl</kbd><kbd>A</kbd> <em>select all</em></span>
+          {/if}
+        </div>
       </section>
     </div>
   {/if}
@@ -462,9 +478,12 @@
   .row {
     flex: 1;
     min-width: 0;
+    user-select: none; /* Shift+click selects chapters, not the text between two clicks */
+    border-radius: var(--radius-m);
     display: block;
     padding: 12px 12px;
   }
+  .row:focus-visible { outline-offset: -2px; } /* inside the rounded row, not a box around it */
   .name {
     overflow: hidden;
     white-space: nowrap;
@@ -477,7 +496,17 @@
     padding-right: 4px;
   }
   li:hover .row-actions { display: flex; }
-  .hint { margin: 0; padding: 6px 20px; }
+  .hint {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    padding: 10px 20px 12px;
+    border-top: 1px solid var(--outline-variant);
+    color: var(--on-surface-variant);
+  }
+  .hint span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .hint kbd + kbd { margin-left: -2px; }
+  .hint em { font-style: normal; color: var(--on-surface-variant); opacity: 0.85; }
   .cat { display: flex; align-items: center; gap: 12px; padding: 8px 0; color: var(--on-surface); }
   :global(.spin) { animation: spin 0.9s linear infinite; }
   .menu-wrap { position: relative; }
