@@ -8,6 +8,8 @@
   import { toast } from "$lib/components/Toasts.svelte";
   import { mangaApi, newerVersion, type CachedSource, type InstalledExtension, type MangaEngineStatus, type RepoExtension } from "$lib/manga";
   import { settings } from "$lib/settings.svelte";
+  import { isSameRepo, repoCandidates } from "$lib/repoLink";
+  import { openUrl } from "@tauri-apps/plugin-opener";
 
   let { filter = "" }: { filter?: string } = $props();
 
@@ -50,14 +52,48 @@
     }
   }
 
-  function addRepo(e: Event) {
+  // Smart paste: accept a repo's index link, its folder, its GitHub page or an "Add to Mihon"
+  // link, try each likely URL, and add the first that really lists extensions.
+  let adding = $state(false);
+  let addMsg = $state<{ ok: boolean; text: string } | null>(null);
+  let showGuide = $state(false);
+
+  async function addRepo(e: Event) {
     e.preventDefault();
-    const url = newRepo.trim();
-    if (!/^https?:\/\//.test(url)) return toast("Enter the repo's https:// URL");
-    if (settings.values.mangaRepos.includes(url)) return toast("Already added");
-    settings.set("mangaRepos", [...settings.values.mangaRepos, url]);
-    newRepo = "";
-    installed = null; // reload
+    if (adding) return;
+    const candidates = repoCandidates(newRepo);
+    if (!candidates.length) {
+      addMsg = { ok: false, text: "That doesn't look like a link. Copy the repo's link from its website or GitHub page and paste it here." };
+      return;
+    }
+    if (isSameRepo(newRepo, settings.values.mangaRepos)) {
+      addMsg = { ok: false, text: "You've already added this repo." };
+      return;
+    }
+    adding = true;
+    addMsg = null;
+    try {
+      let lastError = "";
+      for (const c of candidates) {
+        const res = await mangaApi.repoList([c]).catch((err) => ({ extensions: [], errors: [errorText(err)] }));
+        if (res.extensions.length) {
+          settings.set("mangaRepos", [...settings.values.mangaRepos, c]);
+          addMsg = { ok: true, text: `Added. ${res.extensions.length} extension${res.extensions.length === 1 ? "" : "s"} found: install the ones for the sites you read below.` };
+          newRepo = "";
+          installed = null; // reload
+          return;
+        }
+        lastError = res.errors[0] ?? lastError;
+      }
+      addMsg = {
+        ok: false,
+        text: /dns|connect|timed? ?out|network|offline/i.test(lastError)
+          ? "Couldn't reach that link. Check your internet connection and try again."
+          : "That link didn't lead to an extension repo. Make sure you copied the repo's link (it often ends in index.min.json), not the address of a manga site.",
+      };
+    } finally {
+      adding = false;
+    }
   }
 
   function removeRepo(url: string) {
@@ -159,16 +195,37 @@
     {/if}
   {:else}
     <section class="repos">
-      <h2 class="label-large">Extension repos</h2>
-      <p class="body-small muted">Paste the same repo URLs you use in Kizuna or Mihon on Android. No repos are built in.</p>
+      <div class="repos-head">
+        <h2 class="label-large">Extension repos</h2>
+        {#if settings.values.mangaRepos.length}
+          <button class="btn text small" onclick={() => (showGuide = !showGuide)}>{showGuide ? "Hide help" : "How does this work?"}</button>
+        {/if}
+      </div>
+
+      {#if !settings.values.mangaRepos.length || showGuide}
+        <div class="guide">
+          <p class="body-medium lead">Manga in Kizuna comes from <b>extensions</b>: small add-ons, one per manga site. Extensions are shared in <b>repos</b>, lists made by the community. Kizuna doesn't come with any, so you add the ones you trust.</p>
+          <ol class="steps body-medium">
+            <li><span class="num">1</span><div><b>Find a repo.</b> Repos are made for Mihon, the manga app for Android, and Kizuna uses the same ones. Each has a website or GitHub page with its link; the community or friends you read with can point you to one. New to this? <button class="link" onclick={() => openUrl("https://mihon.app/docs/guides/getting-started#adding-sources")}>Mihon's getting-started guide</button> explains how repos work.</div></li>
+            <li><span class="num">2</span><div><b>Copy its link and paste it below.</b> The repo's link, its GitHub page or its "Add to Mihon" link all work. Kizuna checks it before adding it.</div></li>
+            <li><span class="num">3</span><div><b>Install an extension</b> for each site you read from the list that appears, then find it under <b>Sources</b>.</div></li>
+          </ol>
+          <p class="body-small warn"><Icon name="info" size={16} /> Only add repos you trust: an extension runs inside the app and could contain malware. Repos and extensions are made by other people, not by Kizuna.</p>
+          <p class="body-small muted">Already use Mihon or Kizuna on your phone? Use the same repo links (Mihon: More → Settings → Browse → Extension repos), or import your phone backup from More → Library.</p>
+        </div>
+      {/if}
+
       {#each settings.values.mangaRepos as r}
         <div class="repo-row body-small"><Icon name="folder" size={18} /><span class="url">{r}</span>
           <button class="icon-btn" title="Remove repo" onclick={() => removeRepo(r)}><Icon name="delete" size={18} /></button></div>
       {/each}
       <form class="add" onsubmit={addRepo}>
-        <input class="text-field" placeholder="https://…/index.min.json" bind:value={newRepo} />
-        <button class="btn tonal" type="submit"><Icon name="add" size={18} />Add</button>
+        <input class="text-field" placeholder="Paste a repo link" bind:value={newRepo} oninput={() => (addMsg = null)} disabled={adding} />
+        <button class="btn tonal" type="submit" disabled={adding || !newRepo.trim()}>
+          {#if adding}<Icon name="refresh" size={18} class="spin" />Checking…{:else}<Icon name="add" size={18} />Add{/if}
+        </button>
       </form>
+      {#if addMsg}<p class="body-small add-msg" class:ok={addMsg.ok} class:err={!addMsg.ok}>{addMsg.text}</p>{/if}
       {#each repoErrors as err}<p class="body-small err">{err}</p>{/each}
     </section>
 
@@ -236,6 +293,24 @@
   .repos h2 { margin: 0 0 4px; }
   .repos p { margin: 0 0 8px; }
   .repo-row { display: flex; align-items: center; gap: 8px; color: var(--on-surface); }
+  .repos-head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .repos-head h2 { margin: 0; }
+  .btn.small { padding: 4px 10px; min-height: 0; margin-left: auto; }
+  .guide { margin: 8px 0 14px; padding: 16px 18px; border-radius: var(--radius-m); background: var(--surface-container); }
+  .guide b { color: var(--on-surface); font-weight: 600; }
+  .guide .lead { margin: 0 0 12px; color: var(--on-surface-variant); line-height: 1.5; }
+  .steps { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; color: var(--on-surface-variant); line-height: 1.5; }
+  .steps li { display: flex; gap: 12px; align-items: flex-start; }
+  .num {
+    flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--primary-container); color: var(--on-primary-container); font-weight: 700; font-size: 0.8rem;
+  }
+  .guide p.muted { margin: 0; }
+  .guide .warn { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 10px; color: var(--on-surface-variant); }
+  .guide .warn :global(.icon) { flex: none; margin-top: 1px; color: var(--primary); }
+  .link { border: none; background: none; padding: 0; font: inherit; color: var(--primary); text-decoration: underline; cursor: pointer; }
+  .add-msg { margin: 8px 0 0; }
+  .add-msg.ok { color: var(--primary); }
   .url { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .add { display: flex; gap: 8px; margin-top: 8px; }
   .add .text-field { flex: 1; }
