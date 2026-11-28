@@ -1,7 +1,7 @@
 # Kizuna Desktop
 
 Windows companion to [Kizuna](https://github.com/ohimeee/Kizuna) (Android, `D:\Coding\Kizuna`).
-Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Desktop (v0.4.0 released).
+Tauri 2 + Rust core + Svelte 5 UI. Public repo: github.com/ohimeee/Kizuna-Desktop (v0.4.1 released).
 
 ## Rules
 - Commit messages: imperative title, **no trailers ever** (no Co-Authored-By, no "Generated with").
