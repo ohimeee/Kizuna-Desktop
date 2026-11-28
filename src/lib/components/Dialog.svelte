@@ -54,6 +54,7 @@
     margin: 0 0 16px;
   }
   .content {
+    min-height: 0; /* lets the content shrink and scroll inside the dialog's max-height */
     overflow-y: auto;
     color: var(--on-surface-variant);
   }
