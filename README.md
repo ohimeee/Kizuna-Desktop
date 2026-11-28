@@ -17,6 +17,10 @@ Free and open source. No ads, no account. The Windows companion to [Kizuna](http
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-ef98a6?labelColor=3b2a2e)](/LICENSE)
 [![Windows 10 and 11](https://img.shields.io/badge/Windows-10%20%7C%2011-ef98a6?labelColor=3b2a2e)](https://github.com/ohimeee/Kizuna-Desktop/releases/latest)
 
+[![Built with Rust](https://img.shields.io/badge/Rust-built_with-000000?logo=rust&logoColor=white&labelColor=b7410e)](https://www.rust-lang.org)
+[![Tauri 2](https://img.shields.io/badge/Tauri-2-24c8db?logo=tauri&logoColor=white&labelColor=1b1b1d)](https://tauri.app)
+[![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?logo=svelte&logoColor=white&labelColor=1b1b1d)](https://svelte.dev)
+
 <img src="./docs/screenshots/library.png" alt="The Kizuna library with novels and manga side by side" width="900"/>
 
 <table>
@@ -25,7 +29,7 @@ Free and open source. No ads, no account. The Windows companion to [Kizuna](http
       <img src="./docs/readme/package.png" width="80" alt=""/>
       <h1>5 MB</h1>
       <b>Tiny download</b><br>
-      <sub>the whole app, and it updates itself</sub>
+      <sub>built in Rust, updates itself</sub>
     </td>
     <td align="center" width="25%">
       <img src="./docs/readme/books.png" width="80" alt=""/>
@@ -69,7 +73,9 @@ Free and open source. No ads, no account. The Windows companion to [Kizuna](http
   extension repos you already use, and keep everything in one library with categories and unread badges.
 * **Picks up where your phone left off.** Import a backup from Kizuna on Android to bring over your
   library, categories, read chapters and history in one step.
-* **Light and quick.** About 5 MB to install, no admin rights needed, and the app updates itself.
+* **Light and quick, because it's Rust.** Built with Rust and Tauri on the WebView2 that Windows
+  already has, instead of shipping a whole browser like Electron apps do. About 5 MB to install, no
+  admin rights needed, and the app updates itself.
 
 </div>
 
