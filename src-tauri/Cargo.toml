@@ -1,6 +1,6 @@
 [package]
 name = "kizuna-desktop"
-version = "0.4.2"
+version = "0.4.3"
 description = "Kizuna Desktop: light novel reader"
 authors = ["ohimeee"]
 edition = "2024"
