@@ -135,7 +135,7 @@ Free and open source. No ads, no account. The Windows companion to [Kizuna](http
   location you choose.
 
 **Sources**
-* Novel sources from the Kizuna plugin list: NovelFire, WTR-LAB, Royal Road, Webnovel, Novel Phoenix,
+* Novel sources from the Kizuna plugin list: Wattpad, NovelFire, WTR-LAB, Royal Road, Webnovel, Novel Phoenix,
   NovelPing, Azure Chronicles.
 * Manga from any Mihon extension repo you add (no repos are built in).
 * Sites behind a Cloudflare check open in a real browser window, where you solve the check yourself.
@@ -218,6 +218,21 @@ The manga extension host lives in `ext-host/` (Kotlin, built with Gradle: `.\gra
 </div>
 
 </details>
+
+## Questions or suggestions?
+
+<div align="left">
+
+We'd love to hear from you. Everything goes through GitHub (a free account is all you need):
+
+| You want to… | Do this |
+| --- | --- |
+| 🐞 Report something broken | [Open a bug report](https://github.com/ohimeee/Kizuna-Desktop/issues/new?labels=bug&title=Bug%3A+) and say what you did, what happened, and your app version (More → About). |
+| 💡 Suggest a feature or a new source | [Share your idea](https://github.com/ohimeee/Kizuna-Desktop/issues/new?labels=enhancement&title=Idea%3A+). Sites you'd like to read from are welcome too. |
+| ❓ Ask a question | [Ask here](https://github.com/ohimeee/Kizuna-Desktop/issues/new?labels=question&title=Question%3A+). Someone may have asked already, so [look through the existing ones](https://github.com/ohimeee/Kizuna-Desktop/issues?q=is%3Aissue) first. |
+| 📱 Something in the phone app | Use the [Kizuna for Android issues](https://github.com/ohimeee/Kizuna/issues) instead. |
+
+</div>
 
 ## Contributing
 
