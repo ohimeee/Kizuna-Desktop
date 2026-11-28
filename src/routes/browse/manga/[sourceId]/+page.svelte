@@ -38,17 +38,25 @@
     if (loading || !hasNext || !sourceId) return;
     loading = true;
     const gen = generation;
+    let added = 0;
     try {
       const res = await mangaApi.browse(sourceId, tab, pageNo + 1, tab === "search" ? query.trim() : undefined);
       if (gen !== generation) return;
       const seen = new Set(items.map((i) => i.url));
-      items.push(...res.novels.filter((n) => !seen.has(n.url)));
+      const fresh = res.novels.filter((n) => !seen.has(n.url));
+      items.push(...fresh);
+      added = fresh.length;
       pageNo += 1;
       hasNext = res.hasNextPage && res.novels.length > 0;
     } catch (e) {
       if (gen === generation) error = errorText(e);
     } finally {
-      if (gen === generation) loading = false;
+      if (gen === generation) {
+        loading = false;
+        // A page that doesn't fill the screen (a big or full-screen window) leaves the sentinel
+        // in view, and the observer only fires when visibility changes: keep filling.
+        if (sentinelVisible && hasNext && added > 0 && !error) setTimeout(loadMore, 0);
+      }
     }
   }
 
@@ -66,10 +74,12 @@
   }
 
   let sentinel: HTMLElement | undefined = $state();
+  let sentinelVisible = false;
   $effect(() => {
     if (!sentinel) return;
     const io = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) loadMore();
+      sentinelVisible = entries[0].isIntersecting;
+      if (sentinelVisible) loadMore();
     }, { rootMargin: "800px" });
     io.observe(sentinel);
     return () => io.disconnect();
