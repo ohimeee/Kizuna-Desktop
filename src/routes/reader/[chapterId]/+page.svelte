@@ -1,6 +1,7 @@
 <script lang="ts">
   // The novel reader. Behaviour follows the Android reader's regression log
   // (Kizuna/docs/novel-reader-ui-notes.md); desktop-specific choices are noted inline.
+  import { saveProgress } from "$lib/progress";
   import { page } from "$app/state";
   import { afterNavigate, goto } from "$app/navigation";
   import { api, errorText, type Chapter } from "$lib/api";
@@ -146,7 +147,7 @@
     chapter.progress = p;
     const inList = chapters.find((c) => c.id === chapter!.id);
     if (inList) Object.assign(inList, { lastParagraph: firstVisible, read: markRead, progress: p });
-    api.chapterSaveProgress(chapter.id, firstVisible, p, markRead).catch((e) => console.error(e));
+    saveProgress(chapter.id, firstVisible, p, markRead).catch((e) => console.error(e));
   }
 
   let ticking = false;
@@ -170,7 +171,7 @@
   async function finishAndNext() {
     if (chapter && !chapter.read) {
       chapter.read = true;
-      await api.chapterSaveProgress(chapter.id, paragraphs.length - 1, 100, true);
+      await saveProgress(chapter.id, paragraphs.length - 1, 100, true);
     }
     goChapter(next);
   }
@@ -277,12 +278,18 @@
 
   // ---- keyboard ---------------------------------------------------------------------------
   function onKey(e: KeyboardEvent) {
-    if ((e.target as HTMLElement).tagName === "INPUT" && (e.target as HTMLInputElement).type !== "range") return;
+    const t = e.target as HTMLInputElement;
+    if (t.tagName === "INPUT" && t.type !== "range") return;
+    if (t.tagName === "INPUT" && e.key.startsWith("Arrow")) return; // a focused slider owns its arrow keys
     if (!scroller) return;
     const pageStep = scroller.clientHeight * 0.9;
     switch (e.key) {
       case "ArrowLeft": goChapter(prev); break;
       case "ArrowRight": goChapter(next); break;
+      // handled here, not left to the browser: native arrow scrolling only works while the text
+      // area has focus, which it usually doesn't right after a chapter opens
+      case "ArrowDown": scroller.scrollBy({ top: 80, behavior: "smooth" }); break;
+      case "ArrowUp": scroller.scrollBy({ top: -80, behavior: "smooth" }); break;
       case "PageDown": scroller.scrollBy({ top: pageStep, behavior: "smooth" }); break;
       case "PageUp": scroller.scrollBy({ top: -pageStep, behavior: "smooth" }); break;
       case " ":

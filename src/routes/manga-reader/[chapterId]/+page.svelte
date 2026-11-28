@@ -2,6 +2,7 @@
   // Manga reader. Separate from the novel reader (as on Android). Modes: webtoon (continuous
   // vertical scroll), paged left-to-right, paged right-to-left. Progress is the page index,
   // stored in the same chapter fields the novel reader uses.
+  import { saveProgress } from "$lib/progress";
   import { page } from "$app/state";
   import { afterNavigate, goto } from "$app/navigation";
   import { api, errorText, type Chapter } from "$lib/api";
@@ -100,7 +101,7 @@
     chapter.progress = p;
     const inList = chapters.find((c) => c.id === chapter!.id);
     if (inList) Object.assign(inList, { lastParagraph: current, read: markRead, progress: p });
-    api.chapterSaveProgress(chapter.id, current, p, markRead).catch(console.error);
+    saveProgress(chapter.id, current, p, markRead).catch(console.error);
   }
 
   // Webtoon: the current page is the one crossing the upper third of the viewport.
@@ -162,7 +163,7 @@
   async function finishAndNext() {
     if (chapter && !chapter.read) {
       chapter.read = true;
-      await api.chapterSaveProgress(chapter.id, Math.max(0, pages.length - 1), 100, true);
+      await saveProgress(chapter.id, Math.max(0, pages.length - 1), 100, true);
     }
     goChapter(next);
   }
@@ -195,12 +196,14 @@
   function onKey(e: KeyboardEvent) {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === "INPUT" && (e.target as HTMLInputElement).type !== "range") return;
+    if (tag === "INPUT" && e.key.startsWith("Arrow")) return; // a focused slider owns its arrow keys
     const fwd = rtl ? -1 : 1;
     switch (e.key) {
       case "ArrowRight": paged ? step(fwd) : goChapter(next); break;
       case "ArrowLeft": paged ? step(-fwd) : goChapter(prev); break;
-      case "ArrowDown": if (paged) step(1); else return; break;
-      case "ArrowUp": if (paged) step(-1); else return; break;
+      // long strip: scroll here, not natively (native arrows only work while the pages have focus)
+      case "ArrowDown": paged ? step(1) : scroller?.scrollBy({ top: 80, behavior: "smooth" }); break;
+      case "ArrowUp": paged ? step(-1) : scroller?.scrollBy({ top: -80, behavior: "smooth" }); break;
       case "PageDown": case " ": step(e.shiftKey ? -1 : 1); break;
       case "PageUp": step(-1); break;
       case "Home": paged ? (current = 0) : scroller?.scrollTo({ top: 0 }); break;
@@ -375,7 +378,30 @@
         <label class="row-s"><span>Gap between pages</span><input type="checkbox" checked={s.mangaPageGap} onchange={(e) => settings.set("mangaPageGap", (e.target as HTMLInputElement).checked)} /></label>
       {/if}
       <div class="row-s"><span>Zoom</span><span class="stepper"><button class="icon-btn" onclick={() => (zoom = Math.max(0.3, +(zoom - 0.1).toFixed(2)))}>−</button><span>{Math.round(zoom * 100)}%</span><button class="icon-btn" onclick={() => (zoom = Math.min(3, +(zoom + 0.1).toFixed(2)))}>+</button></span></div>
-      <p class="body-small muted keys">←/→ page (paged) · [ ] chapter · Space next · Ctrl+wheel or +/- zoom · 0 reset · C chapters · F11 fullscreen</p>
+      <div class="keys">
+        <div class="label-medium keys-title">Keyboard shortcuts</div>
+        <dl class="body-small">
+          {#if paged}
+            <dt><kbd>←</kbd><kbd>→</kbd></dt><dd>Turn the page{rtl ? " (right to left)" : ""}</dd>
+            <dt><kbd>↑</kbd><kbd>↓</kbd></dt><dd>Previous / next page (or the mouse wheel)</dd>
+            <dt><kbd>Space</kbd><kbd>PgDn</kbd></dt><dd>Next page</dd>
+            <dt><kbd>Home</kbd><kbd>End</kbd></dt><dd>First / last page</dd>
+          {:else}
+            <dt><kbd>↑</kbd><kbd>↓</kbd></dt><dd>Scroll (or the mouse wheel)</dd>
+            <dt><kbd>Space</kbd><kbd>PgDn</kbd></dt><dd>Down a screen</dd>
+            <dt><kbd>Home</kbd><kbd>End</kbd></dt><dd>Top / end of the chapter</dd>
+            <dt><kbd>←</kbd><kbd>→</kbd></dt><dd>Previous / next chapter</dd>
+          {/if}
+          <dt><kbd>[</kbd><kbd>]</kbd></dt><dd>Previous / next chapter</dd>
+          <dt><kbd>+</kbd><kbd>−</kbd></dt><dd>Zoom in / out (or Ctrl + wheel)</dd>
+          <dt><kbd>0</kbd></dt><dd>Reset zoom</dd>
+          <dt><kbd>C</kbd></dt><dd>Chapter list</dd>
+          <dt><kbd>S</kbd></dt><dd>Reader settings</dd>
+          <dt><kbd>B</kbd></dt><dd>Bookmark this chapter</dd>
+          <dt><kbd>F11</kbd></dt><dd>Fullscreen</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Close a panel, or go back</dd>
+        </dl>
+      </div>
     </aside>
   {/if}
 
@@ -419,7 +445,11 @@
   .row-s { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
   .stepper { display: flex; align-items: center; gap: 4px; }
   .stepper .icon-btn { color: var(--on-surface); font-size: 18px; }
-  .keys { margin: 4px 0 0; line-height: 1.6; }
+  .keys { margin-top: 12px; padding: 14px 16px; border-radius: var(--radius-m); background: var(--surface-container); }
+  .keys-title { margin-bottom: 10px; color: var(--on-surface); }
+  .keys dl { display: grid; grid-template-columns: auto 1fr; gap: 9px 14px; align-items: center; margin: 0; }
+  .keys dt { display: flex; gap: 4px; }
+  .keys dd { margin: 0; color: var(--on-surface-variant); }
   @keyframes from-top { from { transform: translateY(-100%); opacity: 0; } }
   @keyframes from-bottom { from { transform: translateY(100%); opacity: 0; } }
 </style>

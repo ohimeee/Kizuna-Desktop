@@ -2,6 +2,7 @@
   import "../app.css";
   import { page } from "$app/state";
   import NavRail from "$lib/components/NavRail.svelte";
+  import Icon from "$lib/components/Icon.svelte";
   import Toasts from "$lib/components/Toasts.svelte";
   import { settings } from "$lib/settings.svelte";
   import { downloads } from "$lib/downloads.svelte";
@@ -52,9 +53,23 @@
 </script>
 
 {#if settings.loaded}
-  <div class="app" class:immersive>
-    {#if !immersive}<NavRail />{/if}
-    <main>{@render children()}</main>
+  <div class="shell">
+    {#if settings.values.incognito && !immersive}
+      <!-- like Android's banner: never forget nothing is being saved (not in the full-window readers) -->
+      <!-- the whole bar turns it off; the pill is the visible hint -->
+      <button class="incognito-bar" title="Turn off incognito mode" onclick={() => settings.set("incognito", false)}>
+        <span class="inc-msg">
+          <Icon name="visibility_off" size={18} />
+          <b>Incognito mode</b>
+          <span class="inc-sub">History and reading progress aren't being saved</span>
+        </span>
+        <span class="inc-off">Turn off</span>
+      </button>
+    {/if}
+    <div class="app" class:immersive>
+      {#if !immersive}<NavRail />{/if}
+      <main>{@render children()}</main>
+    </div>
   </div>
 {/if}
 {#if settings.loaded && onboarding.open}<Onboarding />{/if}
@@ -63,9 +78,42 @@
 <UpdateDialog />
 
 <style>
+  .shell { display: flex; flex-direction: column; height: 100vh; }
   .app {
     display: flex;
-    height: 100vh;
+    flex: 1;
+    min-height: 0;
+  }
+  .incognito-bar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: 36px;
+    padding: 0 16px;
+    width: 100%;
+    border: none;
+    background: var(--tertiary-container, var(--secondary-container));
+    color: var(--on-tertiary-container, var(--on-secondary-container));
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .incognito-bar:hover .inc-off { background: color-mix(in srgb, currentColor 14%, transparent); }
+  .inc-msg { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+  .inc-msg b { font-weight: 600; white-space: nowrap; }
+  .inc-sub { opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inc-sub::before { content: "·"; margin-right: 8px; opacity: 0.7; }
+  .inc-off {
+    flex: none;
+    padding: 2px 12px;
+    border: 1px solid currentColor;
+    border-radius: 12px;
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+    font-weight: 600;
   }
   main {
     flex: 1;

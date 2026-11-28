@@ -11,6 +11,50 @@
   import { toast } from "$lib/components/Toasts.svelte";
   import { mangaEngine } from "$lib/mangaEngine.svelte";
   import Dialog from "$lib/components/Dialog.svelte";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { renderReleaseNotes } from "$lib/releaseNotes";
+  import FeedbackDialog from "$lib/components/FeedbackDialog.svelte";
+
+  const REPO = "https://github.com/ohimeee/Kizuna-Desktop";
+  const ANDROID = "https://github.com/ohimeee/Kizuna";
+  const KOFI = "https://ko-fi.com/kizunaorg";
+
+  /** "Windows 11 (build 26300)": Windows 11 still reports NT 10.0, so ask for the platform version. */
+  async function windowsVersion(): Promise<string> {
+    const uaData = (navigator as unknown as { userAgentData?: { getHighEntropyValues(h: string[]): Promise<{ platformVersion?: string }> } }).userAgentData;
+    try {
+      const v = (await uaData?.getHighEntropyValues(["platformVersion"]))?.platformVersion;
+      if (v) return parseInt(v, 10) >= 13 ? "Windows 11" : "Windows 10";
+    } catch { /* fall through */ }
+    return /Windows NT 10/.test(navigator.userAgent) ? "Windows 10 or 11" : "Windows";
+  }
+
+  // Report a problem / suggest an idea: an in-app form (FeedbackDialog) that sends via GitHub.
+  let feedbackOpen = $state(false);
+  let feedbackKind = $state<"bug" | "idea">("bug");
+  let env = $state("");
+  async function openIssue(kind: "bug" | "idea") {
+    env = `Kizuna Desktop ${version} · ${await windowsVersion()}`;
+    feedbackKind = kind;
+    feedbackOpen = true;
+  }
+
+  // What's new: this version's release notes from GitHub, in the same format as the update dialog.
+  let whatsNewOpen = $state(false);
+  let whatsNew = $state<{ html: string } | { error: string } | null>(null);
+  async function showWhatsNew() {
+    whatsNewOpen = true;
+    if (whatsNew && "html" in whatsNew) return;
+    whatsNew = null;
+    try {
+      const r = await fetch(`https://api.github.com/repos/ohimeee/Kizuna-Desktop/releases/tags/v${version}`);
+      if (!r.ok) throw new Error(`GitHub answered ${r.status}`);
+      const body = ((await r.json()) as { body?: string }).body ?? "";
+      whatsNew = { html: renderReleaseNotes(body) || "<p>No notes for this version.</p>" };
+    } catch {
+      whatsNew = { error: "Couldn't load the notes. Check your internet connection, or read them on GitHub." };
+    }
+  }
 
   async function checkUpdates() {
     const found = await updater.check();
@@ -40,6 +84,14 @@
   <header class="top-bar"><h1>More</h1></header>
   <div class="scroll">
     <div class="content">
+      <section>
+        <label class="row link toggle">
+          <Icon name="visibility_off" />
+          <span class="two-line"><span>Incognito mode</span><span class="body-small muted">Pauses reading history: what you read isn't saved to History, progress or read marks</span></span>
+          <input type="checkbox" checked={settings.values.incognito} onchange={(e) => settings.set("incognito", (e.target as HTMLInputElement).checked)} />
+          <span class="switch"></span>
+        </label>
+      </section>
       <section>
         <h2 class="label-large">Appearance</h2>
         <ThemePicker />
@@ -118,20 +170,67 @@
       <section>
         <h2 class="label-large">About</h2>
         <div class="row"><span>Kizuna Desktop</span><span class="muted">{version}</span></div>
-        <button class="row link btn-row" onclick={() => (onboarding.open = true)}>
-          <Icon name="explore" /><span>Onboarding guide</span>
+        <button class="row link btn-row" onclick={showWhatsNew}>
+          <Icon name="article" /><span>What's new in {version}</span>
         </button>
         <button class="row link btn-row" disabled={updater.checking} onclick={checkUpdates}>
           <Icon name="update" /><span>{updater.checking ? "Checking…" : "Check for updates"}</span>
         </button>
-        <div class="body-small muted">
-          Light novels on Windows, sharing the Android app's source plugins. Reader fonts Lora and Nunito are under the SIL Open Font License.
+        <button class="row link btn-row" onclick={() => (onboarding.open = true)}>
+          <Icon name="explore" /><span>Onboarding guide</span>
+        </button>
+      </section>
+
+      <section>
+        <h2 class="label-large">Help & support</h2>
+        <button class="row link btn-row" onclick={() => openIssue("bug")}>
+          <Icon name="bug_report" />
+          <span class="two-line"><span>Report a problem</span><span class="body-small muted">Tell us what went wrong; your app and Windows version are added for you</span></span>
+        </button>
+        <button class="row link btn-row" onclick={() => openIssue("idea")}>
+          <Icon name="lightbulb" />
+          <span class="two-line"><span>Suggest a feature or a source</span><span class="body-small muted">Ideas and sites you'd like to read from</span></span>
+        </button>
+        <button class="row link btn-row" onclick={() => openUrl(KOFI)}>
+          <Icon name="favorite" fill />
+          <span class="two-line"><span>Support Kizuna</span><span class="body-small muted">Tip the developer on Ko-fi. Nothing in the app changes or unlocks</span></span>
+          <Icon name="open_in_new" size={18} class="ext" />
+        </button>
+        <button class="row link btn-row" onclick={() => openUrl(REPO)}>
+          <Icon name="code" />
+          <span class="two-line"><span>Kizuna Desktop on GitHub</span><span class="body-small muted">Source code and releases. A star helps others find it</span></span>
+          <Icon name="open_in_new" size={18} class="ext" />
+        </button>
+        <button class="row link btn-row" onclick={() => openUrl(ANDROID)}>
+          <Icon name="android" />
+          <span class="two-line"><span>Kizuna for Android</span><span class="body-small muted">The phone app, with the same sources</span></span>
+          <Icon name="open_in_new" size={18} class="ext" />
+        </button>
+        <div class="body-small muted note">
+          Free and open source under the Apache 2.0 license. Reader fonts Lora and Nunito are under the SIL Open Font License.
         </div>
       </section>
     </div>
   </div>
 </div>
 
+
+<FeedbackDialog bind:open={feedbackOpen} bind:kind={feedbackKind} {env} repo={REPO} />
+
+<Dialog bind:open={whatsNewOpen} title="What's new in {version}" width={560}>
+  {#if !whatsNew}
+    <p class="body-medium muted">Loading…</p>
+  {:else if "html" in whatsNew}
+    <!-- renderReleaseNotes escapes all text before adding its own tags -->
+    <div class="notes">{@html whatsNew.html}</div>
+  {:else}
+    <p class="body-medium">{whatsNew.error}</p>
+  {/if}
+  {#snippet actions()}
+    <button class="btn text" onclick={() => openUrl(`${REPO}/releases/tag/v${version}`)}>View on GitHub</button>
+    <button class="btn" onclick={() => (whatsNewOpen = false)}>Close</button>
+  {/snippet}
+</Dialog>
 
 <Dialog bind:open={removeDialog} title="Remove the manga engine?">
   Your extensions and manga library stay, but manga won't open until you enable the engine again.
@@ -158,4 +257,33 @@
   .spinner.small { width: 24px; height: 24px; border-width: 3px; }
   .engine-progress { width: 100%; height: 4px; accent-color: var(--primary); }
   .error-text { color: var(--error); }
+  .toggle { cursor: pointer; }
+  .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .switch {
+    position: relative; width: 52px; height: 32px; flex: none; border-radius: 16px;
+    background: var(--surface-container-highest); border: 2px solid var(--outline); transition: background 150ms;
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 6px; left: 6px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--outline); transition: all 150ms var(--ease);
+  }
+  .toggle input:checked + .switch { background: var(--primary); border-color: var(--primary); }
+  .toggle input:checked + .switch::after { left: 22px; top: 2px; width: 24px; height: 24px; background: var(--on-primary); }
+  .toggle input:focus-visible + .switch { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .two-line { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; padding: 8px 0; }
+  .link :global(.ext) { color: var(--on-surface-variant); }
+  .link :global(.icon) { flex: none; }
+  .note { margin: 8px 8px 0; }
+  .notes {
+    max-height: min(56vh, 460px); overflow-y: auto; overscroll-behavior: contain;
+    padding: 4px 18px 14px 16px; border-radius: var(--radius-m);
+    background: var(--surface-container); color: var(--on-surface-variant); line-height: 1.55;
+  }
+  .notes :global(h3) { margin: 14px 0 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--primary); }
+  .notes :global(p) { margin: 12px 0 0; }
+  .notes :global(ul) { margin: 0; padding-left: 20px; }
+  .notes :global(li) { margin: 6px 0; }
+  .notes :global(li::marker) { color: var(--primary); }
+  .notes :global(strong) { color: var(--on-surface); font-weight: 600; }
+  .notes :global(code) { padding: 1px 5px; border-radius: 4px; font-size: 0.9em; background: var(--surface-container-highest); color: var(--on-surface); }
 </style>

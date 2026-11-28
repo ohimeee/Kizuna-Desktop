@@ -42,6 +42,8 @@ export const defaults = {
   /** Desktop only: max width of the text column in px (phones are always full width). */
   columnWidth: 760,
   fullscreen: false,
+  /** Incognito: reading saves no history, progress or read marks (like Android). */
+  incognito: false,
   showBatteryAndTime: true,
   showVerticalSeekbar: true,
   removeExtraSpacing: false,

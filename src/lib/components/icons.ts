@@ -2,340 +2,360 @@
 
 import i0 from "@material-symbols/svg-400/rounded/add.svg?raw";
 import i1 from "@material-symbols/svg-400/rounded/add-fill.svg?raw";
-import i2 from "@material-symbols/svg-400/rounded/arrow_back.svg?raw";
-import i3 from "@material-symbols/svg-400/rounded/arrow_back-fill.svg?raw";
-import i4 from "@material-symbols/svg-400/rounded/arrow_downward.svg?raw";
-import i5 from "@material-symbols/svg-400/rounded/arrow_downward-fill.svg?raw";
-import i6 from "@material-symbols/svg-400/rounded/arrow_upward.svg?raw";
-import i7 from "@material-symbols/svg-400/rounded/arrow_upward-fill.svg?raw";
-import i8 from "@material-symbols/svg-400/rounded/auto_stories.svg?raw";
-import i9 from "@material-symbols/svg-400/rounded/auto_stories-fill.svg?raw";
-import i10 from "@material-symbols/svg-400/rounded/battery_5_bar.svg?raw";
-import i11 from "@material-symbols/svg-400/rounded/battery_5_bar-fill.svg?raw";
-import i12 from "@material-symbols/svg-400/rounded/battery_full.svg?raw";
-import i13 from "@material-symbols/svg-400/rounded/battery_full-fill.svg?raw";
-import i14 from "@material-symbols/svg-400/rounded/bookmark.svg?raw";
-import i15 from "@material-symbols/svg-400/rounded/bookmark-fill.svg?raw";
-import i16 from "@material-symbols/svg-400/rounded/cancel.svg?raw";
-import i17 from "@material-symbols/svg-400/rounded/cancel-fill.svg?raw";
-import i18 from "@material-symbols/svg-400/rounded/category.svg?raw";
-import i19 from "@material-symbols/svg-400/rounded/category-fill.svg?raw";
-import i20 from "@material-symbols/svg-400/rounded/check.svg?raw";
-import i21 from "@material-symbols/svg-400/rounded/check-fill.svg?raw";
-import i22 from "@material-symbols/svg-400/rounded/check_circle.svg?raw";
-import i23 from "@material-symbols/svg-400/rounded/check_circle-fill.svg?raw";
-import i24 from "@material-symbols/svg-400/rounded/chevron_left.svg?raw";
-import i25 from "@material-symbols/svg-400/rounded/chevron_left-fill.svg?raw";
-import i26 from "@material-symbols/svg-400/rounded/chevron_right.svg?raw";
-import i27 from "@material-symbols/svg-400/rounded/chevron_right-fill.svg?raw";
-import i28 from "@material-symbols/svg-400/rounded/circle.svg?raw";
-import i29 from "@material-symbols/svg-400/rounded/circle-fill.svg?raw";
-import i30 from "@material-symbols/svg-400/rounded/close.svg?raw";
-import i31 from "@material-symbols/svg-400/rounded/close-fill.svg?raw";
-import i32 from "@material-symbols/svg-400/rounded/contrast.svg?raw";
-import i33 from "@material-symbols/svg-400/rounded/contrast-fill.svg?raw";
-import i34 from "@material-symbols/svg-400/rounded/dark_mode.svg?raw";
-import i35 from "@material-symbols/svg-400/rounded/dark_mode-fill.svg?raw";
-import i36 from "@material-symbols/svg-400/rounded/delete.svg?raw";
-import i37 from "@material-symbols/svg-400/rounded/delete-fill.svg?raw";
-import i38 from "@material-symbols/svg-400/rounded/done_all.svg?raw";
-import i39 from "@material-symbols/svg-400/rounded/done_all-fill.svg?raw";
-import i40 from "@material-symbols/svg-400/rounded/download.svg?raw";
-import i41 from "@material-symbols/svg-400/rounded/download-fill.svg?raw";
-import i42 from "@material-symbols/svg-400/rounded/drag_indicator.svg?raw";
-import i43 from "@material-symbols/svg-400/rounded/drag_indicator-fill.svg?raw";
-import i44 from "@material-symbols/svg-400/rounded/edit.svg?raw";
-import i45 from "@material-symbols/svg-400/rounded/edit-fill.svg?raw";
-import i46 from "@material-symbols/svg-400/rounded/error.svg?raw";
-import i47 from "@material-symbols/svg-400/rounded/error-fill.svg?raw";
-import i48 from "@material-symbols/svg-400/rounded/explore.svg?raw";
-import i49 from "@material-symbols/svg-400/rounded/explore-fill.svg?raw";
-import i50 from "@material-symbols/svg-400/rounded/extension.svg?raw";
-import i51 from "@material-symbols/svg-400/rounded/extension-fill.svg?raw";
-import i52 from "@material-symbols/svg-400/rounded/favorite.svg?raw";
-import i53 from "@material-symbols/svg-400/rounded/favorite-fill.svg?raw";
-import i54 from "@material-symbols/svg-400/rounded/filter_list.svg?raw";
-import i55 from "@material-symbols/svg-400/rounded/filter_list-fill.svg?raw";
-import i56 from "@material-symbols/svg-400/rounded/folder.svg?raw";
-import i57 from "@material-symbols/svg-400/rounded/folder-fill.svg?raw";
-import i58 from "@material-symbols/svg-400/rounded/format_align_center.svg?raw";
-import i59 from "@material-symbols/svg-400/rounded/format_align_center-fill.svg?raw";
-import i60 from "@material-symbols/svg-400/rounded/format_align_justify.svg?raw";
-import i61 from "@material-symbols/svg-400/rounded/format_align_justify-fill.svg?raw";
-import i62 from "@material-symbols/svg-400/rounded/format_align_left.svg?raw";
-import i63 from "@material-symbols/svg-400/rounded/format_align_left-fill.svg?raw";
-import i64 from "@material-symbols/svg-400/rounded/format_align_right.svg?raw";
-import i65 from "@material-symbols/svg-400/rounded/format_align_right-fill.svg?raw";
-import i66 from "@material-symbols/svg-400/rounded/format_list_bulleted.svg?raw";
-import i67 from "@material-symbols/svg-400/rounded/format_list_bulleted-fill.svg?raw";
-import i68 from "@material-symbols/svg-400/rounded/format_size.svg?raw";
-import i69 from "@material-symbols/svg-400/rounded/format_size-fill.svg?raw";
-import i70 from "@material-symbols/svg-400/rounded/fullscreen.svg?raw";
-import i71 from "@material-symbols/svg-400/rounded/fullscreen-fill.svg?raw";
-import i72 from "@material-symbols/svg-400/rounded/fullscreen_exit.svg?raw";
-import i73 from "@material-symbols/svg-400/rounded/fullscreen_exit-fill.svg?raw";
-import i74 from "@material-symbols/svg-400/rounded/history.svg?raw";
-import i75 from "@material-symbols/svg-400/rounded/history-fill.svg?raw";
-import i76 from "@material-symbols/svg-400/rounded/info.svg?raw";
-import i77 from "@material-symbols/svg-400/rounded/info-fill.svg?raw";
-import i78 from "@material-symbols/svg-400/rounded/keyboard_arrow_down.svg?raw";
-import i79 from "@material-symbols/svg-400/rounded/keyboard_arrow_down-fill.svg?raw";
-import i80 from "@material-symbols/svg-400/rounded/keyboard_arrow_up.svg?raw";
-import i81 from "@material-symbols/svg-400/rounded/keyboard_arrow_up-fill.svg?raw";
-import i82 from "@material-symbols/svg-400/rounded/keyboard_double_arrow_up.svg?raw";
-import i83 from "@material-symbols/svg-400/rounded/keyboard_double_arrow_up-fill.svg?raw";
-import i84 from "@material-symbols/svg-400/rounded/label.svg?raw";
-import i85 from "@material-symbols/svg-400/rounded/label-fill.svg?raw";
-import i86 from "@material-symbols/svg-400/rounded/language.svg?raw";
-import i87 from "@material-symbols/svg-400/rounded/language-fill.svg?raw";
-import i88 from "@material-symbols/svg-400/rounded/light_mode.svg?raw";
-import i89 from "@material-symbols/svg-400/rounded/light_mode-fill.svg?raw";
-import i90 from "@material-symbols/svg-400/rounded/line_weight.svg?raw";
-import i91 from "@material-symbols/svg-400/rounded/line_weight-fill.svg?raw";
-import i92 from "@material-symbols/svg-400/rounded/list.svg?raw";
-import i93 from "@material-symbols/svg-400/rounded/list-fill.svg?raw";
-import i94 from "@material-symbols/svg-400/rounded/local_library.svg?raw";
-import i95 from "@material-symbols/svg-400/rounded/local_library-fill.svg?raw";
-import i96 from "@material-symbols/svg-400/rounded/lock.svg?raw";
-import i97 from "@material-symbols/svg-400/rounded/lock-fill.svg?raw";
-import i98 from "@material-symbols/svg-400/rounded/menu_book.svg?raw";
-import i99 from "@material-symbols/svg-400/rounded/menu_book-fill.svg?raw";
-import i100 from "@material-symbols/svg-400/rounded/more_horiz.svg?raw";
-import i101 from "@material-symbols/svg-400/rounded/more_horiz-fill.svg?raw";
-import i102 from "@material-symbols/svg-400/rounded/more_vert.svg?raw";
-import i103 from "@material-symbols/svg-400/rounded/more_vert-fill.svg?raw";
-import i104 from "@material-symbols/svg-400/rounded/my_location.svg?raw";
-import i105 from "@material-symbols/svg-400/rounded/my_location-fill.svg?raw";
-import i106 from "@material-symbols/svg-400/rounded/new_label.svg?raw";
-import i107 from "@material-symbols/svg-400/rounded/new_label-fill.svg?raw";
-import i108 from "@material-symbols/svg-400/rounded/open_in_new.svg?raw";
-import i109 from "@material-symbols/svg-400/rounded/open_in_new-fill.svg?raw";
-import i110 from "@material-symbols/svg-400/rounded/padding.svg?raw";
-import i111 from "@material-symbols/svg-400/rounded/padding-fill.svg?raw";
-import i112 from "@material-symbols/svg-400/rounded/palette.svg?raw";
-import i113 from "@material-symbols/svg-400/rounded/palette-fill.svg?raw";
-import i114 from "@material-symbols/svg-400/rounded/play_arrow.svg?raw";
-import i115 from "@material-symbols/svg-400/rounded/play_arrow-fill.svg?raw";
-import i116 from "@material-symbols/svg-400/rounded/public.svg?raw";
-import i117 from "@material-symbols/svg-400/rounded/public-fill.svg?raw";
-import i118 from "@material-symbols/svg-400/rounded/radio_button_unchecked.svg?raw";
-import i119 from "@material-symbols/svg-400/rounded/radio_button_unchecked-fill.svg?raw";
-import i120 from "@material-symbols/svg-400/rounded/refresh.svg?raw";
-import i121 from "@material-symbols/svg-400/rounded/refresh-fill.svg?raw";
-import i122 from "@material-symbols/svg-400/rounded/release_alert.svg?raw";
-import i123 from "@material-symbols/svg-400/rounded/release_alert-fill.svg?raw";
-import i124 from "@material-symbols/svg-400/rounded/remove_done.svg?raw";
-import i125 from "@material-symbols/svg-400/rounded/remove_done-fill.svg?raw";
-import i126 from "@material-symbols/svg-400/rounded/restart_alt.svg?raw";
-import i127 from "@material-symbols/svg-400/rounded/restart_alt-fill.svg?raw";
-import i128 from "@material-symbols/svg-400/rounded/schedule.svg?raw";
-import i129 from "@material-symbols/svg-400/rounded/schedule-fill.svg?raw";
-import i130 from "@material-symbols/svg-400/rounded/search.svg?raw";
-import i131 from "@material-symbols/svg-400/rounded/search-fill.svg?raw";
-import i132 from "@material-symbols/svg-400/rounded/select_all.svg?raw";
-import i133 from "@material-symbols/svg-400/rounded/select_all-fill.svg?raw";
-import i134 from "@material-symbols/svg-400/rounded/settings.svg?raw";
-import i135 from "@material-symbols/svg-400/rounded/settings-fill.svg?raw";
-import i136 from "@material-symbols/svg-400/rounded/settings_backup_restore.svg?raw";
-import i137 from "@material-symbols/svg-400/rounded/settings_backup_restore-fill.svg?raw";
-import i138 from "@material-symbols/svg-400/rounded/skip_next.svg?raw";
-import i139 from "@material-symbols/svg-400/rounded/skip_next-fill.svg?raw";
-import i140 from "@material-symbols/svg-400/rounded/skip_previous.svg?raw";
-import i141 from "@material-symbols/svg-400/rounded/skip_previous-fill.svg?raw";
-import i142 from "@material-symbols/svg-400/rounded/sort.svg?raw";
-import i143 from "@material-symbols/svg-400/rounded/sort-fill.svg?raw";
-import i144 from "@material-symbols/svg-400/rounded/sync.svg?raw";
-import i145 from "@material-symbols/svg-400/rounded/sync-fill.svg?raw";
-import i146 from "@material-symbols/svg-400/rounded/text_fields.svg?raw";
-import i147 from "@material-symbols/svg-400/rounded/text_fields-fill.svg?raw";
-import i148 from "@material-symbols/svg-400/rounded/travel_explore.svg?raw";
-import i149 from "@material-symbols/svg-400/rounded/travel_explore-fill.svg?raw";
-import i150 from "@material-symbols/svg-400/rounded/tune.svg?raw";
-import i151 from "@material-symbols/svg-400/rounded/tune-fill.svg?raw";
-import i152 from "@material-symbols/svg-400/rounded/update.svg?raw";
-import i153 from "@material-symbols/svg-400/rounded/update-fill.svg?raw";
-import i154 from "@material-symbols/svg-400/rounded/upload.svg?raw";
-import i155 from "@material-symbols/svg-400/rounded/upload-fill.svg?raw";
-import i156 from "@material-symbols/svg-400/rounded/vertical_align_top.svg?raw";
-import i157 from "@material-symbols/svg-400/rounded/vertical_align_top-fill.svg?raw";
-import i158 from "@material-symbols/svg-400/rounded/visibility.svg?raw";
-import i159 from "@material-symbols/svg-400/rounded/visibility-fill.svg?raw";
-import i160 from "@material-symbols/svg-400/rounded/visibility_off.svg?raw";
-import i161 from "@material-symbols/svg-400/rounded/visibility_off-fill.svg?raw";
-import i162 from "@material-symbols/svg-400/rounded/warning.svg?raw";
-import i163 from "@material-symbols/svg-400/rounded/warning-fill.svg?raw";
-import i164 from "@material-symbols/svg-400/rounded/width_normal.svg?raw";
-import i165 from "@material-symbols/svg-400/rounded/width_normal-fill.svg?raw";
-import i166 from "@material-symbols/svg-400/rounded/zoom_in.svg?raw";
-import i167 from "@material-symbols/svg-400/rounded/zoom_in-fill.svg?raw";
+import i2 from "@material-symbols/svg-400/rounded/android.svg?raw";
+import i3 from "@material-symbols/svg-400/rounded/android-fill.svg?raw";
+import i4 from "@material-symbols/svg-400/rounded/arrow_back.svg?raw";
+import i5 from "@material-symbols/svg-400/rounded/arrow_back-fill.svg?raw";
+import i6 from "@material-symbols/svg-400/rounded/arrow_downward.svg?raw";
+import i7 from "@material-symbols/svg-400/rounded/arrow_downward-fill.svg?raw";
+import i8 from "@material-symbols/svg-400/rounded/arrow_upward.svg?raw";
+import i9 from "@material-symbols/svg-400/rounded/arrow_upward-fill.svg?raw";
+import i10 from "@material-symbols/svg-400/rounded/article.svg?raw";
+import i11 from "@material-symbols/svg-400/rounded/article-fill.svg?raw";
+import i12 from "@material-symbols/svg-400/rounded/auto_stories.svg?raw";
+import i13 from "@material-symbols/svg-400/rounded/auto_stories-fill.svg?raw";
+import i14 from "@material-symbols/svg-400/rounded/battery_5_bar.svg?raw";
+import i15 from "@material-symbols/svg-400/rounded/battery_5_bar-fill.svg?raw";
+import i16 from "@material-symbols/svg-400/rounded/battery_full.svg?raw";
+import i17 from "@material-symbols/svg-400/rounded/battery_full-fill.svg?raw";
+import i18 from "@material-symbols/svg-400/rounded/bookmark.svg?raw";
+import i19 from "@material-symbols/svg-400/rounded/bookmark-fill.svg?raw";
+import i20 from "@material-symbols/svg-400/rounded/bug_report.svg?raw";
+import i21 from "@material-symbols/svg-400/rounded/bug_report-fill.svg?raw";
+import i22 from "@material-symbols/svg-400/rounded/cancel.svg?raw";
+import i23 from "@material-symbols/svg-400/rounded/cancel-fill.svg?raw";
+import i24 from "@material-symbols/svg-400/rounded/category.svg?raw";
+import i25 from "@material-symbols/svg-400/rounded/category-fill.svg?raw";
+import i26 from "@material-symbols/svg-400/rounded/check.svg?raw";
+import i27 from "@material-symbols/svg-400/rounded/check-fill.svg?raw";
+import i28 from "@material-symbols/svg-400/rounded/check_circle.svg?raw";
+import i29 from "@material-symbols/svg-400/rounded/check_circle-fill.svg?raw";
+import i30 from "@material-symbols/svg-400/rounded/chevron_left.svg?raw";
+import i31 from "@material-symbols/svg-400/rounded/chevron_left-fill.svg?raw";
+import i32 from "@material-symbols/svg-400/rounded/chevron_right.svg?raw";
+import i33 from "@material-symbols/svg-400/rounded/chevron_right-fill.svg?raw";
+import i34 from "@material-symbols/svg-400/rounded/circle.svg?raw";
+import i35 from "@material-symbols/svg-400/rounded/circle-fill.svg?raw";
+import i36 from "@material-symbols/svg-400/rounded/close.svg?raw";
+import i37 from "@material-symbols/svg-400/rounded/close-fill.svg?raw";
+import i38 from "@material-symbols/svg-400/rounded/code.svg?raw";
+import i39 from "@material-symbols/svg-400/rounded/code-fill.svg?raw";
+import i40 from "@material-symbols/svg-400/rounded/contrast.svg?raw";
+import i41 from "@material-symbols/svg-400/rounded/contrast-fill.svg?raw";
+import i42 from "@material-symbols/svg-400/rounded/dark_mode.svg?raw";
+import i43 from "@material-symbols/svg-400/rounded/dark_mode-fill.svg?raw";
+import i44 from "@material-symbols/svg-400/rounded/delete.svg?raw";
+import i45 from "@material-symbols/svg-400/rounded/delete-fill.svg?raw";
+import i46 from "@material-symbols/svg-400/rounded/done_all.svg?raw";
+import i47 from "@material-symbols/svg-400/rounded/done_all-fill.svg?raw";
+import i48 from "@material-symbols/svg-400/rounded/download.svg?raw";
+import i49 from "@material-symbols/svg-400/rounded/download-fill.svg?raw";
+import i50 from "@material-symbols/svg-400/rounded/drag_indicator.svg?raw";
+import i51 from "@material-symbols/svg-400/rounded/drag_indicator-fill.svg?raw";
+import i52 from "@material-symbols/svg-400/rounded/edit.svg?raw";
+import i53 from "@material-symbols/svg-400/rounded/edit-fill.svg?raw";
+import i54 from "@material-symbols/svg-400/rounded/error.svg?raw";
+import i55 from "@material-symbols/svg-400/rounded/error-fill.svg?raw";
+import i56 from "@material-symbols/svg-400/rounded/explore.svg?raw";
+import i57 from "@material-symbols/svg-400/rounded/explore-fill.svg?raw";
+import i58 from "@material-symbols/svg-400/rounded/extension.svg?raw";
+import i59 from "@material-symbols/svg-400/rounded/extension-fill.svg?raw";
+import i60 from "@material-symbols/svg-400/rounded/favorite.svg?raw";
+import i61 from "@material-symbols/svg-400/rounded/favorite-fill.svg?raw";
+import i62 from "@material-symbols/svg-400/rounded/filter_list.svg?raw";
+import i63 from "@material-symbols/svg-400/rounded/filter_list-fill.svg?raw";
+import i64 from "@material-symbols/svg-400/rounded/folder.svg?raw";
+import i65 from "@material-symbols/svg-400/rounded/folder-fill.svg?raw";
+import i66 from "@material-symbols/svg-400/rounded/format_align_center.svg?raw";
+import i67 from "@material-symbols/svg-400/rounded/format_align_center-fill.svg?raw";
+import i68 from "@material-symbols/svg-400/rounded/format_align_justify.svg?raw";
+import i69 from "@material-symbols/svg-400/rounded/format_align_justify-fill.svg?raw";
+import i70 from "@material-symbols/svg-400/rounded/format_align_left.svg?raw";
+import i71 from "@material-symbols/svg-400/rounded/format_align_left-fill.svg?raw";
+import i72 from "@material-symbols/svg-400/rounded/format_align_right.svg?raw";
+import i73 from "@material-symbols/svg-400/rounded/format_align_right-fill.svg?raw";
+import i74 from "@material-symbols/svg-400/rounded/format_list_bulleted.svg?raw";
+import i75 from "@material-symbols/svg-400/rounded/format_list_bulleted-fill.svg?raw";
+import i76 from "@material-symbols/svg-400/rounded/format_size.svg?raw";
+import i77 from "@material-symbols/svg-400/rounded/format_size-fill.svg?raw";
+import i78 from "@material-symbols/svg-400/rounded/fullscreen.svg?raw";
+import i79 from "@material-symbols/svg-400/rounded/fullscreen-fill.svg?raw";
+import i80 from "@material-symbols/svg-400/rounded/fullscreen_exit.svg?raw";
+import i81 from "@material-symbols/svg-400/rounded/fullscreen_exit-fill.svg?raw";
+import i82 from "@material-symbols/svg-400/rounded/history.svg?raw";
+import i83 from "@material-symbols/svg-400/rounded/history-fill.svg?raw";
+import i84 from "@material-symbols/svg-400/rounded/info.svg?raw";
+import i85 from "@material-symbols/svg-400/rounded/info-fill.svg?raw";
+import i86 from "@material-symbols/svg-400/rounded/keyboard_arrow_down.svg?raw";
+import i87 from "@material-symbols/svg-400/rounded/keyboard_arrow_down-fill.svg?raw";
+import i88 from "@material-symbols/svg-400/rounded/keyboard_arrow_up.svg?raw";
+import i89 from "@material-symbols/svg-400/rounded/keyboard_arrow_up-fill.svg?raw";
+import i90 from "@material-symbols/svg-400/rounded/keyboard_double_arrow_up.svg?raw";
+import i91 from "@material-symbols/svg-400/rounded/keyboard_double_arrow_up-fill.svg?raw";
+import i92 from "@material-symbols/svg-400/rounded/label.svg?raw";
+import i93 from "@material-symbols/svg-400/rounded/label-fill.svg?raw";
+import i94 from "@material-symbols/svg-400/rounded/language.svg?raw";
+import i95 from "@material-symbols/svg-400/rounded/language-fill.svg?raw";
+import i96 from "@material-symbols/svg-400/rounded/light_mode.svg?raw";
+import i97 from "@material-symbols/svg-400/rounded/light_mode-fill.svg?raw";
+import i98 from "@material-symbols/svg-400/rounded/lightbulb.svg?raw";
+import i99 from "@material-symbols/svg-400/rounded/lightbulb-fill.svg?raw";
+import i100 from "@material-symbols/svg-400/rounded/line_weight.svg?raw";
+import i101 from "@material-symbols/svg-400/rounded/line_weight-fill.svg?raw";
+import i102 from "@material-symbols/svg-400/rounded/list.svg?raw";
+import i103 from "@material-symbols/svg-400/rounded/list-fill.svg?raw";
+import i104 from "@material-symbols/svg-400/rounded/local_library.svg?raw";
+import i105 from "@material-symbols/svg-400/rounded/local_library-fill.svg?raw";
+import i106 from "@material-symbols/svg-400/rounded/lock.svg?raw";
+import i107 from "@material-symbols/svg-400/rounded/lock-fill.svg?raw";
+import i108 from "@material-symbols/svg-400/rounded/menu_book.svg?raw";
+import i109 from "@material-symbols/svg-400/rounded/menu_book-fill.svg?raw";
+import i110 from "@material-symbols/svg-400/rounded/more_horiz.svg?raw";
+import i111 from "@material-symbols/svg-400/rounded/more_horiz-fill.svg?raw";
+import i112 from "@material-symbols/svg-400/rounded/more_vert.svg?raw";
+import i113 from "@material-symbols/svg-400/rounded/more_vert-fill.svg?raw";
+import i114 from "@material-symbols/svg-400/rounded/my_location.svg?raw";
+import i115 from "@material-symbols/svg-400/rounded/my_location-fill.svg?raw";
+import i116 from "@material-symbols/svg-400/rounded/new_label.svg?raw";
+import i117 from "@material-symbols/svg-400/rounded/new_label-fill.svg?raw";
+import i118 from "@material-symbols/svg-400/rounded/open_in_new.svg?raw";
+import i119 from "@material-symbols/svg-400/rounded/open_in_new-fill.svg?raw";
+import i120 from "@material-symbols/svg-400/rounded/padding.svg?raw";
+import i121 from "@material-symbols/svg-400/rounded/padding-fill.svg?raw";
+import i122 from "@material-symbols/svg-400/rounded/palette.svg?raw";
+import i123 from "@material-symbols/svg-400/rounded/palette-fill.svg?raw";
+import i124 from "@material-symbols/svg-400/rounded/play_arrow.svg?raw";
+import i125 from "@material-symbols/svg-400/rounded/play_arrow-fill.svg?raw";
+import i126 from "@material-symbols/svg-400/rounded/public.svg?raw";
+import i127 from "@material-symbols/svg-400/rounded/public-fill.svg?raw";
+import i128 from "@material-symbols/svg-400/rounded/radio_button_unchecked.svg?raw";
+import i129 from "@material-symbols/svg-400/rounded/radio_button_unchecked-fill.svg?raw";
+import i130 from "@material-symbols/svg-400/rounded/refresh.svg?raw";
+import i131 from "@material-symbols/svg-400/rounded/refresh-fill.svg?raw";
+import i132 from "@material-symbols/svg-400/rounded/release_alert.svg?raw";
+import i133 from "@material-symbols/svg-400/rounded/release_alert-fill.svg?raw";
+import i134 from "@material-symbols/svg-400/rounded/remove_done.svg?raw";
+import i135 from "@material-symbols/svg-400/rounded/remove_done-fill.svg?raw";
+import i136 from "@material-symbols/svg-400/rounded/restart_alt.svg?raw";
+import i137 from "@material-symbols/svg-400/rounded/restart_alt-fill.svg?raw";
+import i138 from "@material-symbols/svg-400/rounded/schedule.svg?raw";
+import i139 from "@material-symbols/svg-400/rounded/schedule-fill.svg?raw";
+import i140 from "@material-symbols/svg-400/rounded/search.svg?raw";
+import i141 from "@material-symbols/svg-400/rounded/search-fill.svg?raw";
+import i142 from "@material-symbols/svg-400/rounded/select_all.svg?raw";
+import i143 from "@material-symbols/svg-400/rounded/select_all-fill.svg?raw";
+import i144 from "@material-symbols/svg-400/rounded/settings.svg?raw";
+import i145 from "@material-symbols/svg-400/rounded/settings-fill.svg?raw";
+import i146 from "@material-symbols/svg-400/rounded/settings_backup_restore.svg?raw";
+import i147 from "@material-symbols/svg-400/rounded/settings_backup_restore-fill.svg?raw";
+import i148 from "@material-symbols/svg-400/rounded/skip_next.svg?raw";
+import i149 from "@material-symbols/svg-400/rounded/skip_next-fill.svg?raw";
+import i150 from "@material-symbols/svg-400/rounded/skip_previous.svg?raw";
+import i151 from "@material-symbols/svg-400/rounded/skip_previous-fill.svg?raw";
+import i152 from "@material-symbols/svg-400/rounded/sort.svg?raw";
+import i153 from "@material-symbols/svg-400/rounded/sort-fill.svg?raw";
+import i154 from "@material-symbols/svg-400/rounded/sync.svg?raw";
+import i155 from "@material-symbols/svg-400/rounded/sync-fill.svg?raw";
+import i156 from "@material-symbols/svg-400/rounded/text_fields.svg?raw";
+import i157 from "@material-symbols/svg-400/rounded/text_fields-fill.svg?raw";
+import i158 from "@material-symbols/svg-400/rounded/travel_explore.svg?raw";
+import i159 from "@material-symbols/svg-400/rounded/travel_explore-fill.svg?raw";
+import i160 from "@material-symbols/svg-400/rounded/tune.svg?raw";
+import i161 from "@material-symbols/svg-400/rounded/tune-fill.svg?raw";
+import i162 from "@material-symbols/svg-400/rounded/update.svg?raw";
+import i163 from "@material-symbols/svg-400/rounded/update-fill.svg?raw";
+import i164 from "@material-symbols/svg-400/rounded/upload.svg?raw";
+import i165 from "@material-symbols/svg-400/rounded/upload-fill.svg?raw";
+import i166 from "@material-symbols/svg-400/rounded/vertical_align_top.svg?raw";
+import i167 from "@material-symbols/svg-400/rounded/vertical_align_top-fill.svg?raw";
+import i168 from "@material-symbols/svg-400/rounded/visibility.svg?raw";
+import i169 from "@material-symbols/svg-400/rounded/visibility-fill.svg?raw";
+import i170 from "@material-symbols/svg-400/rounded/visibility_off.svg?raw";
+import i171 from "@material-symbols/svg-400/rounded/visibility_off-fill.svg?raw";
+import i172 from "@material-symbols/svg-400/rounded/warning.svg?raw";
+import i173 from "@material-symbols/svg-400/rounded/warning-fill.svg?raw";
+import i174 from "@material-symbols/svg-400/rounded/width_normal.svg?raw";
+import i175 from "@material-symbols/svg-400/rounded/width_normal-fill.svg?raw";
+import i176 from "@material-symbols/svg-400/rounded/zoom_in.svg?raw";
+import i177 from "@material-symbols/svg-400/rounded/zoom_in-fill.svg?raw";
 
 export const ICONS: Record<string, string> = {
   "add": i0,
   "add-fill": i1,
-  "arrow_back": i2,
-  "arrow_back-fill": i3,
-  "arrow_downward": i4,
-  "arrow_downward-fill": i5,
-  "arrow_upward": i6,
-  "arrow_upward-fill": i7,
-  "auto_stories": i8,
-  "auto_stories-fill": i9,
-  "battery_5_bar": i10,
-  "battery_5_bar-fill": i11,
-  "battery_full": i12,
-  "battery_full-fill": i13,
-  "bookmark": i14,
-  "bookmark-fill": i15,
-  "cancel": i16,
-  "cancel-fill": i17,
-  "category": i18,
-  "category-fill": i19,
-  "check": i20,
-  "check-fill": i21,
-  "check_circle": i22,
-  "check_circle-fill": i23,
-  "chevron_left": i24,
-  "chevron_left-fill": i25,
-  "chevron_right": i26,
-  "chevron_right-fill": i27,
-  "circle": i28,
-  "circle-fill": i29,
-  "close": i30,
-  "close-fill": i31,
-  "contrast": i32,
-  "contrast-fill": i33,
-  "dark_mode": i34,
-  "dark_mode-fill": i35,
-  "delete": i36,
-  "delete-fill": i37,
-  "done_all": i38,
-  "done_all-fill": i39,
-  "download": i40,
-  "download-fill": i41,
-  "drag_indicator": i42,
-  "drag_indicator-fill": i43,
-  "edit": i44,
-  "edit-fill": i45,
-  "error": i46,
-  "error-fill": i47,
-  "explore": i48,
-  "explore-fill": i49,
-  "extension": i50,
-  "extension-fill": i51,
-  "favorite": i52,
-  "favorite-fill": i53,
-  "filter_list": i54,
-  "filter_list-fill": i55,
-  "folder": i56,
-  "folder-fill": i57,
-  "format_align_center": i58,
-  "format_align_center-fill": i59,
-  "format_align_justify": i60,
-  "format_align_justify-fill": i61,
-  "format_align_left": i62,
-  "format_align_left-fill": i63,
-  "format_align_right": i64,
-  "format_align_right-fill": i65,
-  "format_list_bulleted": i66,
-  "format_list_bulleted-fill": i67,
-  "format_size": i68,
-  "format_size-fill": i69,
-  "fullscreen": i70,
-  "fullscreen-fill": i71,
-  "fullscreen_exit": i72,
-  "fullscreen_exit-fill": i73,
-  "history": i74,
-  "history-fill": i75,
-  "info": i76,
-  "info-fill": i77,
-  "keyboard_arrow_down": i78,
-  "keyboard_arrow_down-fill": i79,
-  "keyboard_arrow_up": i80,
-  "keyboard_arrow_up-fill": i81,
-  "keyboard_double_arrow_up": i82,
-  "keyboard_double_arrow_up-fill": i83,
-  "label": i84,
-  "label-fill": i85,
-  "language": i86,
-  "language-fill": i87,
-  "light_mode": i88,
-  "light_mode-fill": i89,
-  "line_weight": i90,
-  "line_weight-fill": i91,
-  "list": i92,
-  "list-fill": i93,
-  "local_library": i94,
-  "local_library-fill": i95,
-  "lock": i96,
-  "lock-fill": i97,
-  "menu_book": i98,
-  "menu_book-fill": i99,
-  "more_horiz": i100,
-  "more_horiz-fill": i101,
-  "more_vert": i102,
-  "more_vert-fill": i103,
-  "my_location": i104,
-  "my_location-fill": i105,
-  "new_label": i106,
-  "new_label-fill": i107,
-  "open_in_new": i108,
-  "open_in_new-fill": i109,
-  "padding": i110,
-  "padding-fill": i111,
-  "palette": i112,
-  "palette-fill": i113,
-  "play_arrow": i114,
-  "play_arrow-fill": i115,
-  "public": i116,
-  "public-fill": i117,
-  "radio_button_unchecked": i118,
-  "radio_button_unchecked-fill": i119,
-  "refresh": i120,
-  "refresh-fill": i121,
-  "release_alert": i122,
-  "release_alert-fill": i123,
-  "remove_done": i124,
-  "remove_done-fill": i125,
-  "restart_alt": i126,
-  "restart_alt-fill": i127,
-  "schedule": i128,
-  "schedule-fill": i129,
-  "search": i130,
-  "search-fill": i131,
-  "select_all": i132,
-  "select_all-fill": i133,
-  "settings": i134,
-  "settings-fill": i135,
-  "settings_backup_restore": i136,
-  "settings_backup_restore-fill": i137,
-  "skip_next": i138,
-  "skip_next-fill": i139,
-  "skip_previous": i140,
-  "skip_previous-fill": i141,
-  "sort": i142,
-  "sort-fill": i143,
-  "sync": i144,
-  "sync-fill": i145,
-  "text_fields": i146,
-  "text_fields-fill": i147,
-  "travel_explore": i148,
-  "travel_explore-fill": i149,
-  "tune": i150,
-  "tune-fill": i151,
-  "update": i152,
-  "update-fill": i153,
-  "upload": i154,
-  "upload-fill": i155,
-  "vertical_align_top": i156,
-  "vertical_align_top-fill": i157,
-  "visibility": i158,
-  "visibility-fill": i159,
-  "visibility_off": i160,
-  "visibility_off-fill": i161,
-  "warning": i162,
-  "warning-fill": i163,
-  "width_normal": i164,
-  "width_normal-fill": i165,
-  "zoom_in": i166,
-  "zoom_in-fill": i167,
+  "android": i2,
+  "android-fill": i3,
+  "arrow_back": i4,
+  "arrow_back-fill": i5,
+  "arrow_downward": i6,
+  "arrow_downward-fill": i7,
+  "arrow_upward": i8,
+  "arrow_upward-fill": i9,
+  "article": i10,
+  "article-fill": i11,
+  "auto_stories": i12,
+  "auto_stories-fill": i13,
+  "battery_5_bar": i14,
+  "battery_5_bar-fill": i15,
+  "battery_full": i16,
+  "battery_full-fill": i17,
+  "bookmark": i18,
+  "bookmark-fill": i19,
+  "bug_report": i20,
+  "bug_report-fill": i21,
+  "cancel": i22,
+  "cancel-fill": i23,
+  "category": i24,
+  "category-fill": i25,
+  "check": i26,
+  "check-fill": i27,
+  "check_circle": i28,
+  "check_circle-fill": i29,
+  "chevron_left": i30,
+  "chevron_left-fill": i31,
+  "chevron_right": i32,
+  "chevron_right-fill": i33,
+  "circle": i34,
+  "circle-fill": i35,
+  "close": i36,
+  "close-fill": i37,
+  "code": i38,
+  "code-fill": i39,
+  "contrast": i40,
+  "contrast-fill": i41,
+  "dark_mode": i42,
+  "dark_mode-fill": i43,
+  "delete": i44,
+  "delete-fill": i45,
+  "done_all": i46,
+  "done_all-fill": i47,
+  "download": i48,
+  "download-fill": i49,
+  "drag_indicator": i50,
+  "drag_indicator-fill": i51,
+  "edit": i52,
+  "edit-fill": i53,
+  "error": i54,
+  "error-fill": i55,
+  "explore": i56,
+  "explore-fill": i57,
+  "extension": i58,
+  "extension-fill": i59,
+  "favorite": i60,
+  "favorite-fill": i61,
+  "filter_list": i62,
+  "filter_list-fill": i63,
+  "folder": i64,
+  "folder-fill": i65,
+  "format_align_center": i66,
+  "format_align_center-fill": i67,
+  "format_align_justify": i68,
+  "format_align_justify-fill": i69,
+  "format_align_left": i70,
+  "format_align_left-fill": i71,
+  "format_align_right": i72,
+  "format_align_right-fill": i73,
+  "format_list_bulleted": i74,
+  "format_list_bulleted-fill": i75,
+  "format_size": i76,
+  "format_size-fill": i77,
+  "fullscreen": i78,
+  "fullscreen-fill": i79,
+  "fullscreen_exit": i80,
+  "fullscreen_exit-fill": i81,
+  "history": i82,
+  "history-fill": i83,
+  "info": i84,
+  "info-fill": i85,
+  "keyboard_arrow_down": i86,
+  "keyboard_arrow_down-fill": i87,
+  "keyboard_arrow_up": i88,
+  "keyboard_arrow_up-fill": i89,
+  "keyboard_double_arrow_up": i90,
+  "keyboard_double_arrow_up-fill": i91,
+  "label": i92,
+  "label-fill": i93,
+  "language": i94,
+  "language-fill": i95,
+  "light_mode": i96,
+  "light_mode-fill": i97,
+  "lightbulb": i98,
+  "lightbulb-fill": i99,
+  "line_weight": i100,
+  "line_weight-fill": i101,
+  "list": i102,
+  "list-fill": i103,
+  "local_library": i104,
+  "local_library-fill": i105,
+  "lock": i106,
+  "lock-fill": i107,
+  "menu_book": i108,
+  "menu_book-fill": i109,
+  "more_horiz": i110,
+  "more_horiz-fill": i111,
+  "more_vert": i112,
+  "more_vert-fill": i113,
+  "my_location": i114,
+  "my_location-fill": i115,
+  "new_label": i116,
+  "new_label-fill": i117,
+  "open_in_new": i118,
+  "open_in_new-fill": i119,
+  "padding": i120,
+  "padding-fill": i121,
+  "palette": i122,
+  "palette-fill": i123,
+  "play_arrow": i124,
+  "play_arrow-fill": i125,
+  "public": i126,
+  "public-fill": i127,
+  "radio_button_unchecked": i128,
+  "radio_button_unchecked-fill": i129,
+  "refresh": i130,
+  "refresh-fill": i131,
+  "release_alert": i132,
+  "release_alert-fill": i133,
+  "remove_done": i134,
+  "remove_done-fill": i135,
+  "restart_alt": i136,
+  "restart_alt-fill": i137,
+  "schedule": i138,
+  "schedule-fill": i139,
+  "search": i140,
+  "search-fill": i141,
+  "select_all": i142,
+  "select_all-fill": i143,
+  "settings": i144,
+  "settings-fill": i145,
+  "settings_backup_restore": i146,
+  "settings_backup_restore-fill": i147,
+  "skip_next": i148,
+  "skip_next-fill": i149,
+  "skip_previous": i150,
+  "skip_previous-fill": i151,
+  "sort": i152,
+  "sort-fill": i153,
+  "sync": i154,
+  "sync-fill": i155,
+  "text_fields": i156,
+  "text_fields-fill": i157,
+  "travel_explore": i158,
+  "travel_explore-fill": i159,
+  "tune": i160,
+  "tune-fill": i161,
+  "update": i162,
+  "update-fill": i163,
+  "upload": i164,
+  "upload-fill": i165,
+  "vertical_align_top": i166,
+  "vertical_align_top-fill": i167,
+  "visibility": i168,
+  "visibility-fill": i169,
+  "visibility_off": i170,
+  "visibility_off-fill": i171,
+  "warning": i172,
+  "warning-fill": i173,
+  "width_normal": i174,
+  "width_normal-fill": i175,
+  "zoom_in": i176,
+  "zoom_in-fill": i177,
 };
