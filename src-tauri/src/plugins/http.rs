@@ -94,14 +94,20 @@ impl HttpClient {
 
     /// Value of cookie `name` that would be sent to `url`, or "" (matches Android's contract).
     pub fn get_cookie(&self, url: &str, name: &str) -> String {
-        let Ok(url) = Url::parse(url) else { return String::new() };
-        let store = self.jar.lock().expect("cookie jar poisoned");
-        store
-            .matches(&url)
-            .into_iter()
-            .find(|c| c.name() == name)
-            .map(|c| c.value().to_string())
-            .unwrap_or_default()
+        let Ok(parsed) = Url::parse(url) else { return String::new() };
+        let own = {
+            let store = self.jar.lock().expect("cookie jar poisoned");
+            store.matches(&parsed).into_iter().find(|c| c.name() == name).map(|c| c.value().to_string())
+        };
+        // A site fetched through the browser window (Cloudflare) sets its cookies there instead.
+        own.or_else(|| {
+            if crate::browser::available() && crate::browser::host_needs_browser(url) {
+                crate::browser::cookie(url, name)
+            } else {
+                None
+            }
+        })
+        .unwrap_or_default()
     }
 
     /// Sends with rate-limit retries: (status, cf-mitigated header, body).

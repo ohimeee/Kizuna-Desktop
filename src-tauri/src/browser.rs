@@ -100,6 +100,14 @@ const STATE_JS: &str = r#"JSON.stringify({
   old: !!window.__kzOld
 })"#;
 
+/// A cookie the browser window holds for `url` (HttpOnly ones included), if the window exists.
+/// Sites fetched through the window set their cookies there, not in the plugins' own jar.
+pub fn cookie(url: &str, name: &str) -> Option<String> {
+    let w = APP.get()?.get_webview_window(LABEL)?;
+    let cookies = w.cookies_for_url(Url::parse(url).ok()?).ok()?;
+    cookies.into_iter().find(|c| c.name() == name).map(|c| c.value().to_string())
+}
+
 /// Makes a request through the browser window and returns the response body.
 pub fn request(url: &str, method: &str, body: Option<&str>, headers: &[(String, String)]) -> Result<String> {
     let app = APP.get().context("no browser window available")?;
@@ -125,9 +133,15 @@ fn request_in(
     let w = w.clone();
 
     // Be on the site first, so the page's fetch is same-origin and carries its cookies.
-    let on_site = state(&w).is_ok_and(|s| Url::parse(&s.href).is_ok_and(|u| u.origin().ascii_serialization() == origin));
-    if !on_site {
+    let on_origin = |w: &WebviewWindow| state(w).is_ok_and(|s| Url::parse(&s.href).is_ok_and(|u| u.origin().ascii_serialization() == origin));
+    if !on_origin(&w) {
         open(&w, &format!("{origin}/"))?;
+        // Some sites send their home page elsewhere (m.webnovel.com/ redirects a desktop browser
+        // to www.webnovel.com/), which would make every fetch to this origin cross-origin and fail
+        // with "Failed to fetch". Load the requested page itself instead.
+        if !on_origin(&w) {
+            open(&w, url)?;
+        }
     }
     let r = page_fetch(&w, url, method, body, headers)?;
     if is_challenge(r.0, r.1.as_deref(), &r.2) {
