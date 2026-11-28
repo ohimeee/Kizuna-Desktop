@@ -358,12 +358,14 @@
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(320px, 420px) 1fr;
+    /* minmax(0, 1fr), not 1fr: a bare 1fr can't shrink below its content, so one long
+       unwrapped chapter title would widen the column past the window edge */
+    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
     gap: 8px;
     padding: 0 16px 0 24px;
   }
   @media (max-width: 900px) {
-    .panes { grid-template-columns: 1fr; overflow-y: auto; }
+    .panes { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
     .panes .scroll { overflow: visible; }
   }
   .info {
@@ -429,6 +431,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
     border-radius: var(--radius-l) var(--radius-l) 0 0;
     background: var(--surface-container-low);
   }
